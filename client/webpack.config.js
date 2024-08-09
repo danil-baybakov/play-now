@@ -11,10 +11,14 @@ const stylesHandler = 'style-loader';
 
 
 const config = {
-    entry: './src/index.ts',
-    output: {
-        path: path.resolve(__dirname, 'dist'),
+    entry: {
+        "index": "./src/index.ts",
     },
+    output: {
+        path: path.resolve(__dirname, 'public'),
+        filename: "[contenthash].bundle.js",
+    },
+    devtool: 'source-map',  
     devServer: {
         open: true,
         host: 'localhost',
