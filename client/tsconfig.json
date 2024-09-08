@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "allowSyntheticDefaultImports": true,
+    "noImplicitAny": true,
+    "module": "NodeNext",
+    "target": "es5",
+    "allowJs": true,
+    "moduleResolution": "NodeNext",
+    "strict": true,
+  },
+  "files": ["src/index.ts"],
+  "include": ["src", "index.d.ts"]
+}
