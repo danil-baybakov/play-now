@@ -1,8 +1,14 @@
 import { createElement } from "../../utils/utils";
+import { CustomElement } from "../../types/types";
+
+export interface CustomEvent extends Event {
+    '__isClick'?: boolean;
+}
+
 
 export abstract class BaseAbstract {
 
-    abstract getTemplate(): string;
+    abstract getTemplate(): void;
 
     abstract getElement(): void;
 
@@ -12,22 +18,43 @@ export abstract class BaseAbstract {
 
 
 export class BaseElement extends BaseAbstract {
-    private element: Element | null = null;
+    private _element: CustomElement = null;
+    private _template: string = '';
 
-    getTemplate(): string {
-        return "<div></div>"
+    constructor() {
+        super();
     }
 
-    getElement(): Element | string {
-        this.element ??= createElement(this.getTemplate());
-        if (this.element !== null) return this.element
-        return '';
-      }
+    get element(): CustomElement {
+        return this._element;
+    }
+
+    set element(e: CustomElement ) {
+        this._element = e;
+    }
+
+    get template(): string {
+        return this._template;
+    }
+
+    set template(t: string ) {
+        this._template = t;
+    }
+
+    getTemplate(): void {
+        this.template = '<div></div>'
+    }
+
+    getElement(): void {
+        this.getTemplate();
+        this.element = createElement(this.template);
+    }
     
-    removeElement(): Element | null {
+    removeElement(): void {
         this.element = null;
-        return this.element
     }
+
+
 }
 
 

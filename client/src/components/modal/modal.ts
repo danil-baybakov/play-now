@@ -10,12 +10,14 @@ export class ElementModalAddPlaylist extends BaseElement {
       private playlists: Playlists, 
     ) {
       super();
+      this.getElement();
     }
   
     getTemplate(): string {
       let htmlModalBthAddPlaylists: string = '';
         for (const key in this.playlists) {
-          htmlModalBthAddPlaylists += new ElementModalBthAddPlaylist(this.playlists[key]).getTemplate()
+          const elementModalBthAddPlaylist = new ElementModalBthAddPlaylist(this.playlists[key]);
+          htmlModalBthAddPlaylists += elementModalBthAddPlaylist.template;
         }
       return `
           <div class="playlists-modal">
@@ -43,10 +45,11 @@ export class ElementModalBthAddPlaylist extends BaseElement {
       private playlist: Playlist, 
     ) {
       super();
+      this.getElement();
     }
   
-    getTemplate(): string {
-      return `
+    getTemplate(): void {
+      this.template = `
             <div class="playlists-modal__playlist">
                 <img src=${urlImgPlaylist360} alt=${this.playlist.name} class="playlists-modal__playlist__image" />
                 <div class="playlists-modal__playlist__title">${this.playlist.name}</div>

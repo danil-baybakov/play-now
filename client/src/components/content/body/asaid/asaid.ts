@@ -7,14 +7,16 @@ export class ElementAsaid extends BaseElement {
       private playlists: Playlists
     ) {
       super();
+      this.getElement();
     }
   
-    getTemplate(): string {      
+    getTemplate(): void {      
         let htmlButtonPlaylistLists: string = '';
         for (const key in this.playlists) {
-            htmlButtonPlaylistLists += new ElementButtonPlaylist(this.playlists[key]).getTemplate()
+            const elementButtonPlaylist = new ElementButtonPlaylist(this.playlists[key]);
+            htmlButtonPlaylistLists += elementButtonPlaylist.template;
         }
-        return `
+        this.template = `
             <aside class="aside">
                 <h2 class="aside__h2 visually-hidden">Левая панель навигации</h2>
                 <nav class="aside__nav">
@@ -68,10 +70,11 @@ export class ElementButtonPlaylist extends BaseElement {
       private playlist: Playlist,
     ) {
       super();
+      this.getElement();
     }
   
-    getTemplate(): string {
-      return `                   
+    getTemplate(): void {
+      this.template = `                   
         <li class="aside__item">
             <button class="aside__btn">${this.playlist.name}</button>
         </li>

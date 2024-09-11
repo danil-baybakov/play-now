@@ -9,10 +9,11 @@ export class ElementFooter extends BaseElement {
       private song: Song
     ) {
       super();
+      this.getElement();
     }
   
-    getTemplate(): string {
-      return `
+    getTemplate(): void {
+      this.template = `
             <footer class="footer">
             <div class="player flex">
                 <div class="player__track-name flex">

@@ -1,3 +1,5 @@
+import { CustomElement } from "../types/types";
+
 /**
  * Функция для отрисовки (вставки в DOM) компонентов (верстки)
  * @param {HTMLElement} container - контейнер (HTML элемент)
@@ -82,4 +84,10 @@ export function howManyDays(startDatetimeStr: string): number | null {
     template.innerHTML = html
     // возвращаем DOM элемент
     return template.content.firstElementChild
+  }
+
+  export function append(root: Element | null, node: CustomElement) {
+    if ((node !== null) && (root !== null)) {
+      root.append(node);
+    }
   }

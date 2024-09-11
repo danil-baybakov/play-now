@@ -9,10 +9,11 @@ export class ElementHeader extends BaseElement {
       private user: User,
     ) {
       super();
+      this.getElement();
     }
   
-    getTemplate(): string {
-      return `
+    getTemplate(): void {
+      this.template = `
             <header class="header flex">
                 <a class="header__logo" href="/">
                     <svg width="143" height="29" viewBox="0 0 143 29"

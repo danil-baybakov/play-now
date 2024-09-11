@@ -11,14 +11,16 @@ export class ListElementPlaylist extends BaseElement {
       private playlists: Playlists,
     ) {
       super();
+      this.getElement();
     }
   
-    getTemplate(): string {
+    getTemplate(): void {
       let htmlPlaylistList: string = '';
       for (const key in this.playlists) {
-        htmlPlaylistList += new ElementPlaylist(this.playlists[key]).getTemplate()
+        const elementPlaylist = new ElementPlaylist(this.playlists[key]);
+        htmlPlaylistList += elementPlaylist.template;
       }
-      return `
+      this.template = `
       <section class="playlist section tabs-content" data-target="playlists">
         <h2 class="playlist__h2 visually-hidden">Плейлисты</h2>
         <ul class="playlist__list">
@@ -37,10 +39,11 @@ export class ElementPlaylist extends BaseElement {
     private playlist: Playlist
   ) {
     super();
+    this.getElement();
   }
 
-  getTemplate(): string {
-    return `
+  getTemplate(): void {
+    this.template = `
         <li class="playlist__item">
             <picture>
                 <source srcset=${urlImgPlaylist360} media="(max-width: 576px)">
