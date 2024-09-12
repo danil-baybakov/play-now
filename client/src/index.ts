@@ -9,71 +9,128 @@ import { ElementModalAddPlaylist } from './components/modal/modal';
 import { SONGS, PLAYLISTS, USERS } from './mock/data';
 import { append } from './utils/utils';
 import { CustomEvent } from './components/base/base';
+import { CustomElement } from './types/types';
 
-const body: HTMLBodyElement | null= document.querySelector('body')
+class Controller {
 
-const elementModalAddPlaylist = new ElementModalAddPlaylist(PLAYLISTS).element;
-append(body, elementModalAddPlaylist);
+    body: HTMLBodyElement | null  = null;
+    modalAddPlaylist: CustomElement | null = null;
+    content: HTMLDivElement | null = null;
+    header: CustomElement | null = null;
+    asaid: CustomElement | null = null;
+    main: HTMLElement | null = null;
+    wrapper: HTMLDivElement | null = null;
+    listSongs: CustomElement | null = null;
+    listPlaylists: CustomElement | null = null;
+    footer: CustomElement | null = null;
 
+    constructor() {
+        this.render();
+    }
 
-const content: HTMLDivElement = document.createElement("div");
-content.classList.add("over-wrapper");
-content.setAttribute('style', 'position: relative; overflow: hidden;');
-append(body, content);
+    render() {
+        this.body = document.querySelector('body');
 
-const elementHeader = new ElementHeader(USERS[0]).element;
-append(content, elementHeader);
+        this.modalAddPlaylist = new ElementModalAddPlaylist(PLAYLISTS).element;
+        append(this.body, this.modalAddPlaylist);
 
-const mainWrapper: HTMLDivElement = document.createElement("div");
-mainWrapper.classList.add("content-wrap", "flex")
-content.append(mainWrapper);
+        this.content = document.createElement("div");
+        this.content.classList.add("over-wrapper");
+        this.content.setAttribute('style', 'position: relative; overflow: hidden;');
+        append(this.body, this.content);
 
-const elementAsaid = new ElementAsaid(PLAYLISTS).element;
-append(mainWrapper, elementAsaid);
+        this.header = new ElementHeader(USERS[0]).element;
+        append(this.content, this.header);
 
-const main = document.createElement("main");
-main.classList.add("main");
-mainWrapper.append(main);
+        this.wrapper = document.createElement("div");
+        this.wrapper.classList.add("content-wrap", "flex")
+        this.content.append(this.wrapper);
 
-const openDropdown = (id: number, e: CustomEvent): void => {
-    e.__isClick = true;
-    const dropdown = document.querySelector(`[data-num_track_dropdown="${id}"]`)
-    dropdown?.classList.add('dropdown--active');
+        this.asaid = new ElementAsaid(PLAYLISTS).element;
+        append(this.wrapper, this.asaid);
+
+        this.main = document.createElement("main");
+        this.main.classList.add("main");
+        this.wrapper.append(this.main);
+
+        this.listSongs = new ListElementSong(
+            SONGS, 
+            this.turnOnSong,
+            this.openDropdown, 
+            this.addSong, 
+            this.deleteSong,
+            this.likeSong
+            
+        ).element;
+        
+        append(this.main, this.listSongs);
+        
+        this.listPlaylists = new ListElementPlaylist(PLAYLISTS).element;
+        append(this.main, this.listPlaylists);
+        
+        if (SONGS) {
+            this.footer = new ElementFooter(SONGS[0]).element;
+            append(this.content, this.footer);
+        }
+
+    }
+
+    /***
+     * 
+    */
+    turnOnSong(id: number, e: CustomEvent): void {
+        const old_player = document.querySelector(`.footer`);
+        const content = document.querySelector(`.over-wrapper`);
+        old_player?.remove();
+        if (SONGS) {
+            const player = new ElementFooter(SONGS[id-1]).element;
+            append(content, player);
+        }
+    }
+
+    /***
+    * Обработчик клика кнопки открытия открытия модального окна 
+    * с двумя возможными контестными действиями (удаления/добавления)
+    */
+    openDropdown(id: number, e: CustomEvent): void {
+        document.querySelectorAll('.track__dropdown').forEach((e) => { 
+            e?.classList.remove('dropdown--active');
+        })
+        e.__isClickBtnOpenDropdown = true;
+        const dropdown = document.querySelector(`[data-num_track_dropdown="${id}"]`)
+        dropdown?.classList.add('dropdown--active');
+    }
+
+    /***
+    * Обработчик клика кнопки добавления трека в плейлист 
+    */
+    addSong(id: number, e: CustomEvent): void {
+        const modal = document.querySelector(`.playlists-modal`);
+        modal?.classList.add('show');
+    }
+
+    /***
+    * Обработчик клика кнопки удаления трека из плейлиста  
+    */
+    deleteSong(id: number, e: CustomEvent): void {
+        const deleteBtn = document.querySelector(`[data-num_tracks_item="${id}"]`);
+        deleteBtn?.remove();
+    }
+
+    /***
+    * Обработчик клика кнопки добавления трека в избранное
+    */
+    likeSong(id: number, e: CustomEvent): void {
+        const likeBtn = document.querySelector(`[data-num_track_like_btn="${id}"]`);
+        likeBtn?.classList.toggle('like-btn--active');
+    }
 }
 
-const addSong = (id: number, e: CustomEvent): void => {
-    console.log(id + ' - addSong');
-}
+const controller = new Controller();
 
-const deleteSong = (id: number, e: CustomEvent): void => {
-    console.log(id + ' - deleteSong');
-
-}
-const likeSong = (id: number, e: CustomEvent): void => {
-    console.log(id + ' - likeSong');
-}
-
-const listElementSong = new ListElementSong(
-    SONGS, 
-    openDropdown, 
-    addSong, 
-    deleteSong,
-    likeSong
-).element;
-
-append(main, listElementSong);
-
-const listElementPlaylist = new ListElementPlaylist(PLAYLISTS).element;
-append(main, listElementPlaylist);
-
-const elementFooter = new ElementFooter(SONGS[0]).element;
-append(content, elementFooter);
-
-
-
-// const listElementSongContainer = document.querySelector("section.tracks");
-// const elem = listElementSongContainer?.querySelector('.tracks__item');
-// elem?.addEventListener('click', () => console.log('elem'));
-
-// const listElementPlaylistContainer = document.querySelector("section.playlist");
-// listElementPlaylistContainer?.classList.add('section--active');
+document.body.addEventListener('click', (e: CustomEvent) => {
+    if (e.__isClickBtnOpenDropdown) return;
+    document.querySelectorAll('.track__dropdown').forEach((e) => { 
+        e?.classList.remove('dropdown--active');
+    })
+})

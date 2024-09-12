@@ -13,13 +13,13 @@ export class ElementModalAddPlaylist extends BaseElement {
       this.getElement();
     }
   
-    getTemplate(): string {
+    getTemplate(): void {
       let htmlModalBthAddPlaylists: string = '';
         for (const key in this.playlists) {
           const elementModalBthAddPlaylist = new ElementModalBthAddPlaylist(this.playlists[key]);
           htmlModalBthAddPlaylists += elementModalBthAddPlaylist.template;
         }
-      return `
+      this.template = `
           <div class="playlists-modal">
             <div class="playlists-modal__title">
                 Добавить в плейлист

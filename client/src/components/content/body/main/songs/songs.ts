@@ -9,6 +9,7 @@ export class ListElementSong extends BaseElement {
 
   constructor(
     private songs: Songs,
+    private handlerTurnOnSong: (id: number, e: CustomEvent) => void,
     private handlerOpenDropdown: (id: number, e: CustomEvent) => void,
     private handlerAddSong: (id: number, e: CustomEvent) => void,
     private handlerDeleteSong: (id: number, e: CustomEvent) => void,
@@ -75,6 +76,9 @@ export class ListElementSong extends BaseElement {
         }
     }
 
+    const listSong = this.element?.querySelectorAll('.track__name__link');
+    listSong?.forEach(elem => handler(elem, 'num_track_link', this.handlerTurnOnSong));
+
     const listBtnOpenDropdown = this.element?.querySelectorAll('.track__btn-dropdown');
     listBtnOpenDropdown?.forEach(elem => handler(elem, 'num_track_btn_dropdown', this.handlerOpenDropdown));
 
@@ -103,7 +107,7 @@ export class ElementSong extends BaseElement {
 
   getTemplate(): void {
     this.template = `
-        <li class="tracks__item flex">
+        <li class="tracks__item flex" data-num_tracks_item=${this.song.id}>
 
             <div class="tracks__item__number">${this.number}</div>
 
@@ -111,7 +115,7 @@ export class ElementSong extends BaseElement {
                 <img class="track__img" src=${this.song.image} alt="In Bloom">
                 <div class="track__content">
                     <h3 class="track__name">
-                        <a class="track__name__link" href="#">${this.song.name}</a>
+                        <a class="track__name__link" href="##" data-num_track_link=${this.song.id}>${this.song.name}</a>
                     </h3>
                     <span class="track__author">
                       ${this.song.artist.name}

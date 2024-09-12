@@ -2,7 +2,7 @@ import { createElement } from "../../utils/utils";
 import { CustomElement } from "../../types/types";
 
 export interface CustomEvent extends Event {
-    '__isClick'?: boolean;
+    '__isClickBtnOpenDropdown'?: boolean;
 }
 
 
