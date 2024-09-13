@@ -9,7 +9,7 @@ import { ElementModalAddPlaylist } from './components/modal/modal';
 import { SONGS, PLAYLISTS, USERS } from './mock/data';
 import { append } from './utils/utils';
 import { CustomEvent } from './components/base/base';
-import { CustomElement } from './types/types';
+import { CustomElement, NavigatePath } from './types/types';
 
 class Controller {
 
@@ -46,32 +46,27 @@ class Controller {
         this.wrapper.classList.add("content-wrap", "flex")
         this.content.append(this.wrapper);
 
-        this.asaid = new ElementAsaid(PLAYLISTS).element;
+        this.asaid = new ElementAsaid(
+            PLAYLISTS, 
+            this.navigate.bind(this)
+        ).element;
         append(this.wrapper, this.asaid);
 
         this.main = document.createElement("main");
         this.main.classList.add("main");
         this.wrapper.append(this.main);
-
-        this.listSongs = new ListElementSong(
-            SONGS, 
-            this.turnOnSong,
-            this.openDropdown, 
-            this.addSong, 
-            this.deleteSong,
-            this.likeSong
-            
-        ).element;
-        
-        append(this.main, this.listSongs);
-        
-        this.listPlaylists = new ListElementPlaylist(PLAYLISTS).element;
-        append(this.main, this.listPlaylists);
         
         if (SONGS) {
             this.footer = new ElementFooter(SONGS[0]).element;
             append(this.content, this.footer);
         }
+
+        const path = {
+            path: "tracks",
+            data: null,
+            title: "Треки"
+        }
+        this.navigate(path)
 
     }
 
@@ -79,12 +74,10 @@ class Controller {
      * 
     */
     turnOnSong(id: number, e: CustomEvent): void {
-        const old_player = document.querySelector(`.footer`);
-        const content = document.querySelector(`.over-wrapper`);
-        old_player?.remove();
+        this.footer?.remove();
         if (SONGS) {
-            const player = new ElementFooter(SONGS[id-1]).element;
-            append(content, player);
+            const footer = new ElementFooter(SONGS[id-1]).element;
+            append(this.content, footer);
         }
     }
 
@@ -105,16 +98,15 @@ class Controller {
     * Обработчик клика кнопки добавления трека в плейлист 
     */
     addSong(id: number, e: CustomEvent): void {
-        const modal = document.querySelector(`.playlists-modal`);
-        modal?.classList.add('show');
+        this.modalAddPlaylist?.classList.add('show');
     }
 
     /***
     * Обработчик клика кнопки удаления трека из плейлиста  
     */
     deleteSong(id: number, e: CustomEvent): void {
-        const deleteBtn = document.querySelector(`[data-num_tracks_item="${id}"]`);
-        deleteBtn?.remove();
+        const songItem = document.querySelector(`[data-num_tracks_item="${id}"]`);
+        songItem?.remove();
     }
 
     /***
@@ -123,6 +115,47 @@ class Controller {
     likeSong(id: number, e: CustomEvent): void {
         const likeBtn = document.querySelector(`[data-num_track_like_btn="${id}"]`);
         likeBtn?.classList.toggle('like-btn--active');
+    }
+
+    /***
+     * Навигация
+     */
+    navigate(path: NavigatePath, e: CustomEvent | undefined = undefined) {
+        if (path.path !== "") {
+
+            document.querySelectorAll('.aside__btn').forEach(elem => {
+                elem.classList.remove('aside__btn-active');
+            })
+
+            if (this.main instanceof HTMLElement) this.main.innerHTML = '';
+
+                
+            if ((path.path === "tracks") || (path.path === "playlist")) {
+                this.listSongs = new ListElementSong(
+                    SONGS, 
+                    path.title,
+                    this.turnOnSong.bind(this),
+                    this.openDropdown.bind(this), 
+                    this.addSong.bind(this), 
+                    this.deleteSong.bind(this),
+                    this.likeSong.bind(this)  
+                ).element;
+                append(this.main, this.listSongs);
+
+                if (path.path === "tracks") {
+                    document.querySelector('[data-path="tracks"]')?.classList.add('aside__btn-active');
+                } else {
+                    document.querySelector(`[data-num_playlist="${path.data}"]`)?.classList.add('aside__btn-active');
+                }
+
+            } else {
+                this.listPlaylists = new ListElementPlaylist(PLAYLISTS).element;
+                append(this.main, this.listPlaylists);
+                document.querySelector('[data-path="playlists"]')?.classList.add('aside__btn-active');
+            }
+
+        }
+        
     }
 }
 

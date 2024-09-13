@@ -21,7 +21,7 @@ export class ListElementPlaylist extends BaseElement {
         htmlPlaylistList += elementPlaylist.template;
       }
       this.template = `
-      <section class="playlist section tabs-content" data-target="playlists">
+      <section class="playlist section" data-target="playlists">
         <h2 class="playlist__h2 visually-hidden">Плейлисты</h2>
         <ul class="playlist__list">
           ${htmlPlaylistList}

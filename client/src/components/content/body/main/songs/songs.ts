@@ -9,6 +9,7 @@ export class ListElementSong extends BaseElement {
 
   constructor(
     private songs: Songs,
+    private title: string | null,
     private handlerTurnOnSong: (id: number, e: CustomEvent) => void,
     private handlerOpenDropdown: (id: number, e: CustomEvent) => void,
     private handlerAddSong: (id: number, e: CustomEvent) => void,
@@ -28,7 +29,7 @@ export class ListElementSong extends BaseElement {
     }
     this.template = `
         <section class="tracks section tabs-content section--active" data-target="tracks">
-          <h2 class="tracks__h2 title__h2">Треки</h2>
+          <h2 class="tracks__h2 title__h2">${this.title}</h2>
           <div class="tracks__content">
             <div class="tracks__header flex">
               <div class="tracks__header__number">№</div>
