@@ -1,14 +1,14 @@
 import { BaseElement } from "../../../base/base";
 import { Playlists, Playlist } from "../../../../api/playlist/apiPlaylist";
 import { CustomEvent } from "../../../base/base";
-import { NavigatePath } from "../../../../types/types";
+import { IPage } from "../../../../types/types";
 
 
 export class ElementAsaid extends BaseElement {
 
     constructor(
       private playlists: Playlists,
-      private handlerNavigate: (path: NavigatePath, e: CustomEvent | undefined) => void
+      private handlerNavigate: (page: string) => void
     ) {
       super();
       this.getElement();
@@ -36,7 +36,7 @@ export class ElementAsaid extends BaseElement {
                     </button>
                     <ul class="aside__list">
                       <li class="aside__item">
-                          <button class="aside__btn aside__tabs-btn aside__btn-active" data-path="tracks"><svg width="25"
+                          <button class="aside__btn aside__tabs-btn aside__btn-active" data-path="/"><svg width="25"
                                   height="27" viewBox="0 0 25 27" fill="none" xmlns="http://www.w3.org/2000/svg">
                                   <path
                                       d="M20.5 22C22.433 22 24 20.433 24 18.5C24 16.567 22.433 15 20.5 15C18.567 15 17 16.567 17 18.5C17 20.433 18.567 22 20.5 22Z"
@@ -60,6 +60,9 @@ export class ElementAsaid extends BaseElement {
                               </svg><span class="aside__btn__text">Плейлисты</span>
                           </button>
                       </li>
+                      <li class="aside__item">
+                          <button class="aside__btn" data-path="/favorite">Избранное</button>
+                      </li>
                       ${htmlButtonPlaylistLists}
                 </ul>
             </nav>
@@ -72,19 +75,12 @@ export class ElementAsaid extends BaseElement {
 
       navBtns?.forEach(elem => {
         elem.addEventListener('click', (e) => {
+
+          e.preventDefault();
+
           if (elem instanceof HTMLElement) {
-            let title: string | null = null;
-            switch (elem.dataset["path"]) {
-              case "tracks": title = "Треки"; break;
-              case "playlists": title = "Плейлисты"; break;
-              case "playlist": title = `Плейлист ${elem.dataset["num_playlist"]}`; break;
-            }
-            const path = {
-              path: elem.dataset["path"] ? elem.dataset["path"] : '',
-              data: elem.dataset["num_playlist"] ? elem.dataset["num_playlist"] : null,
-              title: title
-            }
-            if (path)this.handlerNavigate(path, e);
+            const path  =  elem.dataset["path"] ? elem.dataset["path"] : '';
+            this.handlerNavigate(path);
           }
         })
       })
@@ -96,7 +92,7 @@ export class ElementAsaid extends BaseElement {
 export class ElementButtonPlaylist extends BaseElement {
 
     constructor(
-      private playlist: Playlist,
+      private playlist: Playlist
     ) {
       super();
       this.getElement();
@@ -105,7 +101,7 @@ export class ElementButtonPlaylist extends BaseElement {
     getTemplate(): void {
       this.template = `                   
         <li class="aside__item">
-            <button class="aside__btn" data-num_playlist=${this.playlist.id} data-path="playlist">${this.playlist.name}</button>
+            <button class="aside__btn" data-path=playlist-${this.playlist.id}>${this.playlist.name}</button>
         </li>
       `; 
     }

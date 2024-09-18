@@ -51,7 +51,7 @@ export class ElementPlaylist extends BaseElement {
                     src=${urlImgPlaylist} alt=${this.playlist.name}>
             </picture>
             <div class="playlist__content">
-                <h3 class="playlist__h3"><a class="playlist__h3__link" href="/">${this.playlist.name}</a></h3><span
+                <h3 class="playlist__h3"><a class="playlist__h3__link" href="/playlist-${this.playlist.id}">${this.playlist.name}</a></h3><span
                     class="playlist__count">${this.playlist.songs.length > 0 ? this.playlist.songs.length : "Нет"} треков</span>
             </div>
         </li>

@@ -7,9 +7,11 @@ export class ElementHeader extends BaseElement {
 
     constructor(
       private user: User,
+      private handlerSearch: (key: string, value: string, e: CustomEvent) => void,
     ) {
       super();
       this.getElement();
+      this.setEventListenner();
     }
   
     getTemplate(): void {
@@ -29,7 +31,7 @@ export class ElementHeader extends BaseElement {
                 <div class="header__search">
                     <input class="header__search__field" type="search" placeholder="ЧТО БУДЕМ ИСКАТЬ?">
                 </div>
-                <button class="header__user"><img class="header__user__img" src="${urlIngUser}"
+                <button class="header__user" disabled><img class="header__user__img" src="${urlIngUser}"
                     alt="Изображение пользователя"><span class="header__user__text">${this.user.username}</span><svg
                     class="header__user__svg" width="6" height="11" viewBox="0 0 6 11" fill="none"
                     xmlns="http://www.w3.org/2000/svg">
@@ -41,5 +43,26 @@ export class ElementHeader extends BaseElement {
             </header>  
       `; 
     }
+
+    /**
+     * Функция устанавливает обработчики событий на активные элементы
+     */
+    setEventListenner() {
+
+        // получаем элемент с полем поиска
+        const searchField = this.element?.querySelector('.header__search__field');
+        // устанавливаем обработчик события ввода текста в
+        // поле поиска
+        if (searchField instanceof HTMLElement) { 
+            searchField.addEventListener('input', (e) => {
+                const target = e.target as HTMLInputElement;
+                const searchParams = {
+                    key: "search",
+                    value: target.value
+                }
+                this.handlerSearch(searchParams.key, searchParams.value, e as CustomEvent)
+            })
+        }
+      }
   
   }

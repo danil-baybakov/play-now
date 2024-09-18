@@ -86,8 +86,39 @@ export function howManyDays(startDatetimeStr: string): number | null {
     return template.content.firstElementChild
   }
 
+
+  /**
+   * Функция добавляем в родительский DOM-элемент дочерний DOM элемент
+   * @param {Element | null} root - родительский DOM-элемент
+   * @param {CustomElement} node - дочерний DOM элемент
+   */
   export function append(root: Element | null, node: CustomElement) {
     if ((node !== null) && (root !== null)) {
       root.append(node);
     }
+  }
+
+  /**
+   * Функция сохраняет объект в SessionStorage
+   * @param {string} key - ключ
+   * @param {any} obj - объект хранения
+   */
+  export function setSessionStorage(key: string, obj: any): void {
+    sessionStorage.setItem(key, JSON.stringify(obj))
+  }
+
+  /**
+   * Функция получает объект из SessionStorage
+   * @param {string} key - ключ
+   */
+  export function getSessionStorage(key: string): any {
+    const result_str = sessionStorage.getItem(key);
+    if (result_str) {
+      try {
+        return JSON.parse(result_str);
+      } catch {
+        return result_str
+      }
+    }
+    return null;
   }

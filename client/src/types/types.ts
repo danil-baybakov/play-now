@@ -5,3 +5,9 @@ export type NavigatePath = {
     data: string | null,
     title: string | null,
   }
+
+
+export interface IPage {
+    name: string;
+    search: string;
+}
