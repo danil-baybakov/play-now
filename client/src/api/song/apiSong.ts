@@ -102,6 +102,26 @@ export function fetchUnlikeSongsById(token: string, id: number): Promise<Song> {
     .then((result) => result as Song)
 }
 
+/**
+ * Функция запроса к API
+ * Получает список треков конкретного плейлиста по Id
+ * @param {string} token - токен авторизации
+ * @param {number} id - Id плейлиста
+ * @returns - список треков конкретного плейлиста
+ */
+export function fetchGetSongsPlaylistById(token: string, id: number): Promise<Songs> {    
+    return fetch(`${BASE_URL}/playlists/${id}/songs`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+        },  
+    })
+    .then(validateResponse)
+    .then((response) => response.json())
+    .then((result) => result as Songs)
+}
+
 
 /**
  * Функция определяет - трек в избранном у пользователя или нет ?? 

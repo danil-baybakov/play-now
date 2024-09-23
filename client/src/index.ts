@@ -12,8 +12,9 @@ import { CustomEvent } from './components/base/base';
 import { CustomElement, NavigatePath, IPage } from './types/types';
 import { REG_USER, USER } from './api/config';
 import { fetchRegister, fetchLogin, JwtDto } from './api/user/apiUser';
-import { fetchSearchSongs, fetchGetSongsById, fetchLikeSongsById, fetchUnlikeSongsById, isLikeSong, Songs, Song } from './api/song/apiSong';
-import { Playlists } from './api/playlist/apiPlaylist';
+import { fetchSearchSongs, fetchGetSongsById, fetchLikeSongsById, 
+    fetchUnlikeSongsById, fetchGetSongsPlaylistById, isLikeSong, Songs, Song } from './api/song/apiSong';
+import { Playlists, fetchGetUserPlaylists, fetchPlaylistsById } from './api/playlist/apiPlaylist';
 
 /**
  * Основной класс для создания приложения
@@ -33,8 +34,12 @@ class App {
 
 
     constructor() {
-        (async () => await this.login())();
-        this.render();
+        // this.init();
+    }
+
+    async init() {
+        await this.login();
+        await this.render();
     }
 
 
@@ -51,7 +56,7 @@ class App {
             try {
                 // регистрируем польователя в API если не был зарегестрирован
                 await fetchRegister(REG_USER);
-            } catch(e) {} 
+            } catch(e) {console.log(e);} 
             // авторизируем пользователя в API и получаем токен
             const { access_token } = await fetchLogin(USER); 
             // сохраняем токен в sessionStorage
@@ -62,7 +67,7 @@ class App {
     /**
      * Функция отрисовки компонентов при инициалиации класса
      */
-    render() {
+    async render() {
 
         // получаем элемент - тело приложения
         this.body = document.querySelector('body');
@@ -90,9 +95,15 @@ class App {
         this.wrapper.classList.add("content-wrap", "flex")
         this.content.append(this.wrapper);
 
+        // c API получаем список плейлистов
+        let playlists: Playlists = [];
+        try {
+            playlists = await fetchGetUserPlaylists(getSessionStorage('token'));
+        } catch(e) {console.log(e);}
+
         // создаем и довавляем в обертку центальной части контента меню
         this.asaid = new ElementAsaid(
-            PLAYLISTS, 
+            playlists, 
             this.navigate.bind(this)
         ).element;
         append(this.wrapper, this.asaid);
@@ -238,20 +249,20 @@ class App {
 
             // если открываем страницу конкретного плейлиста
             // из пути URL браузера извлекаем номер плейлиста 
-            let playlistId = '';
-            if (selectPlaylist) playlistId = page.name.replace('/playlist-', '')
-
-            // c API получаем список треков
-            let songs: Songs = [];
-            try {
-                songs = await fetchSearchSongs(getSessionStorage('token'), searchName);
-            } catch(e) {}
+            // и формируем заголовок страницы
+            let titlePleylist: string | null = null;
+            let playlistId = ''
+            if (selectPlaylist) {
+                playlistId = page.name.replace('/playlist-', '');
+                const playlist = await fetchPlaylistsById(getSessionStorage('token'), Number(playlistId));
+                titlePleylist = playlist.name;
+            }
 
             // формируем заголовок страницы
-            const title = !selectPlaylist ? ((page.name === '/') ? "Треки": "Избранное") : `Плейлист ${playlistId}`;
+            const title = !selectPlaylist ? ((page.name === '/') ? "Треки": "Избранное") : `${titlePleylist}`;
 
             // отрисовывам страницу с треками
-            this.renderPageSongs(songs, title);
+            const songs = await this.renderPageSongs(searchName, title, titlePleylist);
 
             if (!selectPlaylist) {
                 // кнопку навигации Треки делаем активной
@@ -271,13 +282,19 @@ class App {
         // переход на страницу Плейлисты
         if (page.name === '/playlists') {
 
+            // c API получаем список плейлистов
+            let playlists: Playlists = [];
+            try {
+                playlists = await fetchGetUserPlaylists(getSessionStorage('token'));
+            } catch(e) {console.log(e);}
+
             // фильтруем плейлисты в соответствии с поисковым запросом
-            const playlists = PLAYLISTS.filter(({ name }) =>
+            const filterPlaylists = playlists.filter(({ name }) =>
                 name.toLowerCase().includes(searchName.toLowerCase())
             );
 
             // отрисовывам страницу с плейлистами
-            this.renderPagePlaylists(playlists);
+            this.renderPagePlaylists(filterPlaylists);
 
             // кнопку навигации Плейлисты делаем активной
             document.querySelector('[data-path="playlists"]')?.classList.add('aside__btn-active');
@@ -337,7 +354,20 @@ class App {
      * @param {Songs} songs - список треков (объекты с данными о треке)
      * @param {string} title - заголовок страницы
      */
-    renderPageSongs(songs: Songs, title: string): void {
+    async renderPageSongs(search: string, title: string, playlistId: string | null = null): Promise<Songs> {
+        // c API получаем список треков
+        let songs: Songs = [];
+        try {
+            if (!playlistId) {
+                songs = await fetchSearchSongs(getSessionStorage('token'), search);
+            } else {
+                const playlist_songs = await fetchGetSongsPlaylistById(getSessionStorage('token'), Number(playlistId));
+                songs = playlist_songs.filter(({ name }) =>
+                    name.toLowerCase().includes(search.toLowerCase())
+                );
+            }
+        } catch(e) {console.log(e);}
+
         // вызываем функцию очистки контейнера страниц
         this.clearPageContainer()
 
@@ -353,6 +383,8 @@ class App {
             this.likeSong.bind(this)  
         ).element;
         append(this.main, this.listSongs);
+
+        return songs
     }
 
     /**
@@ -380,7 +412,9 @@ class App {
 
 }
 
+// создание класса приложения
 const app = new App();
+app.init().then(() => {});
 
 
 

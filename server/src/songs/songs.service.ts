@@ -50,8 +50,6 @@ export class SongsService {
       throw new HttpException('Song is already liked', HttpStatus.BAD_REQUEST);
     }
 
-    song.likes.push(user);
-
     return await this.songRepository.save(song);
   }
 

@@ -23,6 +23,7 @@ export class ListElementSong extends BaseElement {
     this.setEventListenner();
   }
 
+
   getTemplate(): void {
     let htmlSongList: string = '';
     for (const key in this.songs) {
@@ -75,7 +76,7 @@ export class ListElementSong extends BaseElement {
         let id: number;
         if (elem instanceof HTMLElement) {
           id = Number(elem.dataset[nameDatasetNum]);
-          if (id) elem.addEventListener('click', (e) => funcHandler(id, e))
+          if (id) elem.addEventListener('click', async (e) => await funcHandler(id, e))
         }
     }
 

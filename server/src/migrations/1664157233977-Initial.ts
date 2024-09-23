@@ -85,7 +85,7 @@ export class Initial1664157233977 implements MigrationInterface {
     );
 
     await queryRunner.query(
-      `CREATE TABLE "user_song_likes_song" ("userId" integer NOT NULL, "songId" integer NOT NULL, PRIMARY KEY ("userId", "songId"))`,
+      `CREATE TABLE "user_song_likes_song" ("songId" integer NOT NULL, "userId" integer NOT NULL, PRIMARY KEY ("songId", "userId"))`,
     );
 
     await queryRunner.query(
