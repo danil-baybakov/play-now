@@ -32,7 +32,8 @@ export class SongsService {
   }
 
   async findOne(id: number): Promise<Song> {
-    const song = await this.songRepository.findOne(id, {
+    const song = await this.songRepository.findOne({
+      where: { id },
       loadEagerRelations: true,
     });
 
@@ -49,6 +50,8 @@ export class SongsService {
     if (song.likes.find((p) => p.id === user.id)) {
       throw new HttpException('Song is already liked', HttpStatus.BAD_REQUEST);
     }
+
+    song.likes.push(user);
 
     return await this.songRepository.save(song);
   }

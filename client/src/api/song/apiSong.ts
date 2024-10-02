@@ -122,7 +122,6 @@ export function fetchGetSongsPlaylistById(token: string, id: number): Promise<So
     .then((result) => result as Songs)
 }
 
-
 /**
  * Функция определяет - трек в избранном у пользователя или нет ?? 
  * @param {Song} song - объект с данными трека
@@ -131,3 +130,6 @@ export function fetchGetSongsPlaylistById(token: string, id: number): Promise<So
 export function isLikeSong(song: Song, username: string): boolean {
     return song.likes.filter(v => v.username == username).length > 0;
 }
+
+
+

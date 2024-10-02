@@ -1,6 +1,8 @@
 import { RegisterDto, LoginDto } from "./user/apiUser";
 
-export const BASE_URL = "http://localhost:3000/api";
+export const ORIGIN = "http://localhost:3000";
+
+export const BASE_URL = `${ORIGIN}/api`;
 
 export const REG_USER: RegisterDto = {
     username: "DanilBaybakov",

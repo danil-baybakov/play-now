@@ -1,28 +1,134 @@
 import { BaseElement } from "../../base/base";
 import { Song } from "../../../api/song/apiSong";
 import { convertMsToTime } from "../../../utils/utils";
+import { isLikeSong } from "../../../api/song/apiSong";
+import { CustomEvent } from "../../base/base";
+import { HTMLElementOrNone } from "../../../types/types";
+import { ORIGIN } from "../../../api/config";
+
+type AudioStatus = {
+    playing: boolean;
+    currentTime: number;
+    duration: number;
+    volume: number;
+}
 
 
-export class ElementFooter extends BaseElement {
+
+export class ElementPlayer extends BaseElement {
+
+    id: number | null = null;  // идентификатор трека
+
+    private audioCtx: AudioContext | null = null; // аудиоконтекст
+    private sourceNode: MediaElementAudioSourceNode | undefined = undefined // аудио источник
+    private gainNode: GainNode | null = null; // интерфейс изменения громкости воспроизведения трека
+
+    // объект статуса воспроизведения трека
+    audioStatus: AudioStatus = {
+        playing: false, // статус 0 - остановка, 1 - воспроизведение
+        currentTime: 0, // текущее время воспроизведения
+        duration: 0, // длительность воспроизведения
+        volume: 1 // текущее значение звука воспроизведения
+    }
+
+    // DOM элементы
+    btnLikeSongEl: HTMLElementOrNone = null; // кнопка добавления трека в избранное
+    btnShaffleSongEl: HTMLElementOrNone= null; // кнопка Перемешать
+    btnSkipbackSongEl: HTMLElementOrNone= null; // кнопка Назад
+    btnPlayPauseSongEl: HTMLElementOrNone= null; // кнопка Воспроизвести/Пауза
+    btnSkipnextSongEl: HTMLElementOrNone= null; // кнопка Вперед
+    btnRepeatSongEl: HTMLElementOrNone= null; // кнопка На повтор
+    audioEl: HTMLMediaElement | null | undefined = null; // аудиопроигрыватель
+    currentTimeEl: HTMLElementOrNone= null; // элемент с текущим временем воспроизведения трека
+    processBarEl: HTMLElementOrNone= null; // процесс бар воспроизведения трека
+    durationEl: HTMLElementOrNone= null; // элемент с длительностью воспроизведения трека
+    volumeBarEl: HTMLElementOrNone= null; // элемент управления громкостью звука воспроизведения трека
+
 
     constructor(
-      private song: Song
+      private song: Song,
+      private username: string = '',
+      private startPlay: boolean = false,
+      private handlerLikeSong: (id: number, e: CustomEvent) => void,
+      private handlerSongEnded: () => void = () => {}
     ) {
       super();
-      this.getElement();
+      this.itit();
     }
+
+    itit() {
+
+        // формируем DOM-элемент класса
+        this.getElement();
+
+        // добавляем в класс идентификатор трека как свойство
+        this.id = Number(this.song.id);
+
+        // в свойства класса добавляем элементы
+        // кнопка добавления трека в избранное
+        this.btnLikeSongEl = this.element?.querySelector('.player__track__like');
+        // кнопка Перемешать
+        this.btnShaffleSongEl = this.element?.querySelector('.player__shaffle-btn');
+        // кнопка Назад
+        this.btnSkipbackSongEl = this.element?.querySelector('.player__skipback-btn');
+        // кнопка Воспроизвести/Пауза
+        this.btnPlayPauseSongEl = this.element?.querySelector('.player__play-btn');
+        // кнопка Вперед
+        this.btnSkipnextSongEl = this.element?.querySelector('.player__skipnext-btn');
+        // кнопка На повтор
+        this.btnRepeatSongEl = this.element?.querySelector('.player__repeat-btn');
+        // элемент аудиоплееера <audio>
+        this.audioEl = this.element?.querySelector('.player__audio');
+        // элемент с текущим временем воспроизведения трека 
+        this.currentTimeEl = this.element?.querySelector('.player__time-start');
+        // элемент с процесс баром воспроизведения трека 
+        this.processBarEl = this.element?.querySelector('.player__range-play');
+        // элемент с длительностью трека 
+        this.durationEl = this.element?.querySelector('.player__time-end');
+        // элемент управления громкостью звука воспроизведения трека
+        this.volumeBarEl = this.element?.querySelector('.player__value-range');
+
+        // инициалиация аудиоконтекста
+        this.initializeAudio();
+
+        // вешаем обработчики событий на все элементы
+        this.setEventListenner();
+
+    }
+
+    initializeAudio() {
+        // создаем экземпляр аудиоконтекста
+        this.audioCtx = new AudioContext();
+
+        // создаем и подключаем аудио источник
+        if (this.audioEl) {
+            this.sourceNode = this.audioCtx.createMediaElementSource(this.audioEl);
+            this.gainNode = this.audioCtx.createGain();
+            if (this.gainNode instanceof GainNode) this.gainNode.gain.value = this.audioStatus.volume;
+            this.sourceNode
+                .connect(this.gainNode)
+                .connect(this.audioCtx.destination);
+        }
+
+
+    }
+
+
   
     getTemplate(): void {
       this.template = `
-            <footer class="footer">
+        <footer class="footer" data-id-song=${this.song.id}>
             <div class="player flex">
+                <audio class="player__audio" ${this.startPlay ? "autoplay" : ''} controls crossorigin="anonymous" style="display: none">
+                    <source src="${ORIGIN}${this.song.path}" type="audio/mpeg">
+                </audio>
                 <div class="player__track-name flex">
                     <img class="player__track__img" src=${this.song.image}
                         alt="Histoire Sans Nom - Ludovico Einaudi, Czech National Symphony Orchestra">
                     <div class="player__track-name__content">
                         <div class="flex player__name__header">
                             <h3 class="player__track__h3">${this.song.name}</h3>
-                            <button class="player__track__like">
+                            <button class="player__track__like ${isLikeSong(this.song, this.username) ? 'like-btn--active' : ''}" data-player_num_track_like_btn=${this.id}>
                                 <svg width="22" height="18" viewBox="0 0 22 18" fill="none"
                                     xmlns="http://www.w3.org/2000/svg">
                                     <path
@@ -36,7 +142,8 @@ export class ElementFooter extends BaseElement {
                 </div>
                 <div class="player__controls">
                     <div class="player__controls__header">
-                        <button class="player__shaffle-btn"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"
+                        <button class="player__shaffle-btn">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"
                                 xmlns="http://www.w3.org/2000/svg">
                                 <path
                                     d="M14.9946 11.4307C14.9933 11.4211 14.9922 11.4116 14.9903 11.4021C14.9887 11.3943 14.9866 11.3867 14.9846 11.379C14.9826 11.3709 14.9808 11.3627 14.9784 11.3546C14.9761 11.3471 14.9732 11.3398 14.9706 11.3324C14.9678 11.3244 14.9651 11.3163 14.9618 11.3084C14.959 11.3017 14.9557 11.2952 14.9526 11.2886C14.9488 11.2804 14.9451 11.2721 14.9408 11.264C14.9375 11.258 14.9338 11.2522 14.9303 11.2463C14.9255 11.2382 14.9209 11.23 14.9156 11.2221C14.9114 11.2159 14.9068 11.2101 14.9024 11.2041C14.8972 11.197 14.8921 11.1897 14.8864 11.1828C14.8792 11.174 14.8713 11.1657 14.8635 11.1574C14.8601 11.1538 14.8571 11.1499 14.8536 11.1464L13.3536 9.64642C13.3071 9.59999 13.252 9.56316 13.1914 9.53803C13.1307 9.5129 13.0657 9.49997 13 9.49997C12.9343 9.49997 12.8693 9.5129 12.8086 9.53803C12.748 9.56316 12.6929 9.59999 12.6464 9.64642C12.6 9.69285 12.5632 9.74798 12.538 9.80865C12.5129 9.86931 12.5 9.93433 12.5 10C12.5 10.0657 12.5129 10.1307 12.538 10.1914C12.5632 10.252 12.6 10.3071 12.6464 10.3536L13.2929 11H12.5585C12.0015 10.9994 11.4526 10.8662 10.9573 10.6113C10.462 10.3565 10.0346 9.98729 9.71039 9.53436L7.10333 5.88446C6.68649 5.30212 6.13693 4.82744 5.50015 4.49974C4.86337 4.17203 4.15769 4.00072 3.44153 4H2C1.86739 4 1.74021 4.05268 1.64645 4.14645C1.55268 4.24021 1.5 4.36739 1.5 4.5C1.5 4.63261 1.55268 4.75979 1.64645 4.85355C1.74021 4.94732 1.86739 5 2 5H3.44153C3.99854 5.00056 4.5474 5.13379 5.04268 5.38866C5.53795 5.64353 5.96539 6.01271 6.28961 6.46564L8.89667 10.1155C9.31351 10.6979 9.86307 11.1726 10.4999 11.5003C11.1366 11.828 11.8423 11.9993 12.5585 12H13.2929L12.6464 12.6464C12.5526 12.7402 12.5 12.8674 12.5 13C12.5 13.1326 12.5526 13.2598 12.6464 13.3536C12.7402 13.4474 12.8674 13.5 13 13.5C13.1326 13.5 13.2598 13.4474 13.3536 13.3536L14.8536 11.8536C14.8571 11.8501 14.8601 11.8462 14.8635 11.8426C14.8713 11.8343 14.8792 11.826 14.8864 11.8172C14.8921 11.8103 14.8972 11.803 14.9024 11.7959C14.9068 11.7899 14.9114 11.7841 14.9156 11.7779C14.9209 11.77 14.9255 11.7618 14.9303 11.7537C14.9338 11.7478 14.9375 11.742 14.9408 11.736C14.9451 11.7279 14.9488 11.7196 14.9526 11.7114C14.9557 11.7048 14.959 11.6983 14.9618 11.6916C14.9651 11.6837 14.9678 11.6756 14.9706 11.6676C14.9732 11.6602 14.9761 11.6529 14.9784 11.6454C14.9808 11.6373 14.9826 11.6291 14.9846 11.621C14.9866 11.6133 14.9887 11.6057 14.9903 11.5979C14.9922 11.5884 14.9933 11.5789 14.9946 11.5693C14.9955 11.5627 14.9968 11.5562 14.9975 11.5495C15.0008 11.5166 15.0008 11.4834 14.9975 11.4505C14.9968 11.4438 14.9955 11.4373 14.9946 11.4307Z"
@@ -65,6 +172,10 @@ export class ElementFooter extends BaseElement {
                                     d="M27.0385 21.4138C26.9679 21.4862 26.7012 21.7962 26.4528 22.0512C24.9963 23.655 21.197 26.28 19.2085 27.0813C18.9065 27.21 18.143 27.4825 17.735 27.5C17.3441 27.5 16.9715 27.41 16.6159 27.2275C16.1727 26.9725 15.8171 26.5713 15.6223 26.0975C15.4968 25.7688 15.302 24.785 15.302 24.7675C15.1072 23.6913 15 21.9425 15 20.01C15 18.1688 15.1072 16.4913 15.2667 15.3988C15.2849 15.3812 15.4798 14.1588 15.6929 13.74C16.0838 12.975 16.8473 12.5 17.6644 12.5H17.735C18.2672 12.5187 19.3863 12.9938 19.3863 13.0113C21.2677 13.8138 24.9793 16.31 26.471 17.9688C26.471 17.9688 26.8911 18.395 27.0738 18.6613C27.3587 19.0437 27.5 19.5175 27.5 19.9913C27.5 20.52 27.3405 21.0125 27.0385 21.4138Z"
                                     fill="white" />
                             </svg>
+                            <svg width="40" height="40" version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 310.284 310.284" style="enable-background:new 0 0 310.284 310.284;" xml:space="preserve">
+                                <path d="M155.142,0C69.597,0,0,69.597,0,155.142s69.597,155.142,155.142,155.142s155.142-69.597,155.142-155.142 S240.688,0,155.142,0z M130.392,212.864c0,9.665-7.835,17.5-17.5,17.5s-17.5-7.835-17.5-17.5v-115c0-9.665,7.835-17.5,17.5-17.5 s17.5,7.835,17.5,17.5V212.864z M209.392,212.864c0,9.665-7.835,
+                                17.5-17.5,17.5s-17.5-7.835-17.5-17.5v-115 c0-9.665,7.835-17.5,17.5-17.5s17.5,7.835,17.5,17.5V212.864z" fill="#AAAAAA"/>
+                            </svg>
                         </button>
                         <button class="player__skipnext-btn"><svg width="10" height="12" viewBox="0 0 10 12" fill="none"
                                 xmlns="http://www.w3.org/2000/svg">
@@ -85,8 +196,9 @@ export class ElementFooter extends BaseElement {
                         </button>
                     </div>
                     <div class="player__controls__footer">
-                        <span class="player__time-start">${convertMsToTime(this.song.duration)}</span>
-                        <div class="player__range-play" id="range-play"></div><span class="player__time-end">${convertMsToTime(this.song.duration)}</span>
+                        <span class="player__time-start">0:00</span>
+                        <input type="range" max="100" value="0" class="player__range-play" id="range-play">
+                        <span class="player__time-end">0:00</span>
                     </div>
                 </div>
                 <div class="player__value">
@@ -99,11 +211,161 @@ export class ElementFooter extends BaseElement {
                             d="M10.9124 5.58582C11.0981 5.77153 11.2454 5.99201 11.3459 6.23466C11.4464 6.47731 11.4981 6.73739 11.4981 7.00003C11.4981 7.26267 11.4464 7.52274 11.3459 7.7654C11.2454 8.00805 11.0981 8.22853 10.9124 8.41424"
                             stroke="#AAAAAA" stroke-linecap="round" stroke-linejoin="round" />
                     </svg>
-                    <div class="player__value-range" id="range-value"></div>
+                    <input type="range" max="2" value="${this.audioStatus.volume}" step="0.01"  class="player__value-range" id="range-value">
                 </div>
             </div>
         </footer>
       `; 
+
+    }
+
+    private setEventListenner() {
+
+        // обработка события нажатия на кнопку добавления трека в избранное
+        this.btnLikeSongEl?.addEventListener('click', (e: CustomEvent) => {
+            e.preventDefault();
+            if (this.id) this.handlerLikeSong(this.id, e);
+        });
+
+        // обработка события нажатия на кнопку Воспроизвести/Пауза
+        this.btnPlayPauseSongEl?.addEventListener('click', (e: CustomEvent) => {
+            e.preventDefault(); 
+            this.togglePlay();
+        });
+
+        // обработка события нажатия на кнопку Перемешать
+        this.btnShaffleSongEl?.addEventListener('click', (e: CustomEvent) => {
+            e.preventDefault();
+        });
+
+        // обработка события нажатия на кнопку Назад
+        // обработка события нажатия на кнопку Вперед
+        // обработка события нажатия на кнопку Повтор
+
+        // обработка события передвижения ползунка процесс бара воспроизведения трека 
+        // для премотки в нужное место воспроизведения трека
+        this.processBarEl?.addEventListener('input', () => {
+            // вызываем метод перемотки трека до нужного времени воспроизведения
+            if (this.processBarEl instanceof HTMLInputElement) this.seekTo(Number(this.processBarEl.value));
+        }, false);
+
+        // обработка события передвижения ползунка элемента управления громкостью воспроизведения трека
+        this.volumeBarEl?.addEventListener('input', () => {
+            this.changeVolume();
+        }, false);
+
+        // обработка события запускающегося после загрузки метаданных <audio> элемента
+        this.audioEl?.addEventListener('loadedmetadata', () => {
+
+            // обновляем значение длительности воспроиведения трека в объекте статуса воспроизведения трека
+            this.audioStatus.duration = this.audioEl?.duration || 0;
+
+            // обновляем максимальное значение в процесс баре воспроизведения трека
+            if (this.processBarEl instanceof HTMLInputElement) this.processBarEl.max= String(this.audioStatus.duration);
+
+            // форматируем время для вывода
+            const secs = `${parseInt(`${this.audioStatus.duration % 60}`, 10)}`.padStart(2, '0');
+            const mins = parseInt(`${(this.audioStatus.duration/60) % 60}`, 10);
+
+            // обновляем значение элемента с длительностью трека
+            if (this.durationEl instanceof HTMLElement) this.durationEl.textContent = `${mins}:${secs}`;
+
+        });
+
+        // обработка события воспроизведения трека
+        this.audioEl?.addEventListener('play', () => {
+            // меняем отображение кнопки управления воспроизведением трека
+            this.btnPlayPauseSongEl?.classList.add('play');
+            // в объекте статуса воспроизведения трека устанавливаем статус воспроиведения в 1
+            this.audioStatus.playing = true;
+        })
+
+        // обработка события приостановки воспроизведения трека
+        this.audioEl?.addEventListener('pause', () => {
+            // меняем отображение кнопки управления воспроизведением трека
+            this.btnPlayPauseSongEl?.classList.remove('play');
+            // в объекте статуса воспроизведения трека устанавливаем статус воспроиведения в 0
+            this.audioStatus.playing = false;
+        })
+
+        // обработка события обновлении timeupdate времени, указанного атрибутом .currentTime <audio> элемента
+        this.audioEl?.addEventListener('timeupdate', () => {
+            // вызов функции обновления отображения текущего времени воспроизведения трека в элементах
+            if (this.audioEl?.currentTime) this.updateAudioTime(this.audioEl?.currentTime);
+        });
+
+        // обработка события, когда воспроизведение или потоковая передача 
+        // останавливаются из-за достижения конца мультимедиа или отсутствия дополнительных данных <audio> элемента
+        this.audioEl?.addEventListener('ended', () => {
+            // в объекте статуса воспроизведения трека устанавливаем статус воспроиведения в 0 
+            this.audioStatus.playing = false;
+            // меняем отображение кнопки воспроиведения
+            this.btnPlayPauseSongEl?.classList.remove('play');
+
+            this.handlerSongEnded();
+        });
+
+    }
+
+    /**
+     * Метод для воспроиведения/остановки трека
+     */
+    private async togglePlay() {
+        // если в настоящее время аудиоконтекст приостановлен
+        // возобновляем работу аудиоконтекста
+        if (this.audioCtx?.state === 'suspended') {
+            await this.audioCtx.resume();
+        }
+
+        // если трек воспроизводится
+        // переключаем на паузу
+        if (this.audioStatus.playing) {
+            await this.audioEl?.pause();
+        // иначе воспроизводим
+        } else {
+            await this.audioEl?.play();
+        }
+    }
+
+     /**
+     * Метод обновляет отображение текущего времени воспроизведения трека в элементах
+     */
+    private updateAudioTime(time: number) {
+
+        // обновляем значение текущего времени воспроиведения в объекте статуса воспроизведения трека
+        this.audioStatus.currentTime = time;
+
+        // обновляем текущее положение ползкнка процесс бара воспроизведения трека
+        if (this.processBarEl instanceof HTMLInputElement) this.processBarEl.value = String(this.audioStatus.currentTime);
+
+        // форматируем время возпроизведения
+        const secs = `${parseInt(`${time % 60}`, 10)}`.padStart(2, '0');
+        const mins = parseInt(`${(time/60) % 60}`, 10);
+
+        // обновляем значение элемента с текущим временем воспроизведения трека
+        if (this.currentTimeEl instanceof HTMLElement) this.currentTimeEl.textContent = `${mins}:${secs}`;
+
+    }
+
+    /**
+     * Метод позволяет проматывать трек до нужного времени воспроизведения
+     * @param time - задание времени начала воспроизведения
+     */
+    private seekTo(time: number) {
+        if (this.audioEl instanceof HTMLMediaElement) this.audioEl.currentTime = time;
+    }
+
+    /**
+     * Метод управления звуком воспроизведения трека
+     */
+    changeVolume() {
+        // из элементв управления громкостью получаем заданное значение громкости
+        // записываем это значение в объект статуса воспроизведения трека
+        if (this.volumeBarEl instanceof HTMLInputElement) this.audioStatus.volume = Number(this.volumeBarEl.value);
+
+        // изменяем громкость через gainNode
+        if (this.gainNode instanceof GainNode) this.gainNode.gain.value = this.audioStatus.volume;
     }
   
+
   }

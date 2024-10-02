@@ -32,6 +32,12 @@ export type JwtDto = {
     access_token: string,
 }
 
+export type UserLikesDto = {
+    artistLikes: Artists,
+    albumLikes: Albums,
+    songLikes: Songs,
+}
+
 export type Users = User[];
 
 /**
@@ -71,4 +77,23 @@ export function fetchLogin(log_user: LoginDto): Promise<JwtDto> {
     .then(validateResponse)
     .then((response) => response.json())
     .then((result) => result as JwtDto)
+}
+
+/**
+ * Функция запроса к API
+ * Получает объект со списками избранных треков/плейлистов/артистов текущего пользователя 
+ * @param { string } token - токен авторизации
+ * @returns { UserLikesDto } - объект со списками избранных треков/плейлистов/артистов текущего пользователя 
+ */
+export function fetchUserLikes(token: string): Promise<UserLikesDto> {    
+    return fetch(`${BASE_URL}/users/likes`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+        },  
+    })
+    .then(validateResponse)
+    .then((response) => response.json())
+    .then((result) => result as UserLikesDto)
 }

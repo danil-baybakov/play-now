@@ -1,8 +1,9 @@
-import { TypeOrmModuleOptions, TypeOrmOptionsFactory } from '@nestjs/typeorm';
+import { TypeOrmOptionsFactory } from '@nestjs/typeorm';
 import { join } from 'path';
+import { SqliteConnectionOptions } from 'typeorm/driver/sqlite/SqliteConnectionOptions';
 
 export class DatabaseConfiguration implements TypeOrmOptionsFactory {
-  createTypeOrmOptions(): TypeOrmModuleOptions {
+  createTypeOrmOptions(): SqliteConnectionOptions {
     return {
       type: 'sqlite',
       database: 'data/database.db',
@@ -10,9 +11,6 @@ export class DatabaseConfiguration implements TypeOrmOptionsFactory {
       logging: false,
       entities: [join(__dirname, '**', '*.entity.{ts,js}')],
       migrations: [__dirname + '/migrations/**/*.{js,ts}'],
-      cli: {
-        migrationsDir: 'src/migrations',
-      },
     };
   }
 }

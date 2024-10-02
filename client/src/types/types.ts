@@ -1,4 +1,4 @@
-export type CustomElement = Element | null;
+export type ElementOrNone = Element | null;
 
 export type NavigatePath = {
     path: string,
@@ -11,3 +11,5 @@ export interface IPage {
     name: string;
     search: string;
 }
+
+export type HTMLElementOrNone = HTMLElement | null | undefined;

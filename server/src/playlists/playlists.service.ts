@@ -46,7 +46,8 @@ export class PlaylistsService {
   }
 
   async findOne(id: number): Promise<Playlist> {
-    const playlist = await this.playlistRepository.findOne(id, {
+    const playlist = await this.playlistRepository.findOne({
+      where: { id },
       loadEagerRelations: true,
     });
 

@@ -1,5 +1,5 @@
 import { createElement } from "../../utils/utils";
-import { CustomElement } from "../../types/types";
+import { ElementOrNone } from "../../types/types";
 
 export interface CustomEvent extends Event {
     '__isClickBtnOpenDropdown'?: boolean;
@@ -18,18 +18,18 @@ export abstract class BaseAbstract {
 
 
 export class BaseElement extends BaseAbstract {
-    private _element: CustomElement = null;
+    private _element: ElementOrNone = null;
     private _template: string = '';
 
     constructor() {
         super();
     }
 
-    get element(): CustomElement {
+    get element(): ElementOrNone {
         return this._element;
     }
 
-    set element(e: CustomElement ) {
+    set element(e: ElementOrNone ) {
         this._element = e;
     }
 

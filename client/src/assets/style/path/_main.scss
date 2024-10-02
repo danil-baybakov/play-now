@@ -1033,6 +1033,14 @@ body {
   gap: 20px;
 }
 
+.player__track__like.like-btn--active path {
+  fill: var(--color-promo);
+}
+
+.player__track__like path {
+  fill: var(--color-greytxt);
+}
+
 .player__track-name {
   align-items: center;
   max-width: 388px;
@@ -1104,6 +1112,10 @@ body {
   margin-right: 12px;
 }
 
+.player__time-end {
+  margin-left: 12px;
+}
+
 .player__value {
   display: flex;
   align-items: center;
@@ -1157,6 +1169,75 @@ body {
 .player__value .noUi-handle.noUi-handle-lower:after {
   display: none;
 }
+
+///////////////////////////////////
+.player__play-btn {
+  transition: all .3s ease-in-out;
+}
+
+.player__play-btn svg {
+  display: block;
+  font-size: 0;
+}
+
+.player__shaffle-btn,
+.player__skipback-btn,
+.player__skipnext-btn,
+.player__repeat-btn,
+.player__play-btn {
+  outline: none;
+}
+
+.player__shaffle-btn svg path,
+.player__skipback-btn svg path,
+.player__skipnext-btn svg path,
+.player__repeat-btn svg path,
+.player__play-btn svg path:first-child {
+  transition: fill .3s ease-in-out;
+}
+
+.player__shaffle-btn:focus svg path,
+.player__skipback-btn:focus svg path,
+.player__skipnext-btn:focus svg path,
+.player__repeat-btn:focus svg path,
+.player__play-btn:focus svg path:first-child {
+  fill: black;
+}
+
+.player__shaffle-btn:hover svg path,
+.player__skipback-btn:hover svg path,
+.player__skipnext-btn:hover svg path,
+.player__repeat-btn:hover svg path,
+.player__play-btn:hover svg path:first-child {
+  fill: black;
+}
+
+.player__shaffle-btn:active svg path,
+.player__skipback-btn:active svg path,  
+.player__skipnext-btn:active svg path,
+.player__repeat-btn:active svg path {
+  fill: #FFCD03;
+}
+
+.player__shaffle-btn.active svg path,
+.player__repeat-btn.active svg path {
+  fill: #FFCD03;
+}
+
+.player__play-btn svg:last-child {
+  display: none;
+}
+
+.player__play-btn.play svg:last-child {
+  display: block;
+}
+
+.player__play-btn.play svg:first-child {
+  display: none;
+}
+
+
+////////////////////////////////////
 
 .footer {
   position: fixed;

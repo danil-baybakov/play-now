@@ -1,4 +1,5 @@
-import { CustomElement } from "../types/types";
+import { ElementOrNone } from "../types/types";
+import { IPage } from "../types/types";
 
 /**
  * Функция для отрисовки (вставки в DOM) компонентов (верстки)
@@ -90,9 +91,9 @@ export function howManyDays(startDatetimeStr: string): number | null {
   /**
    * Функция добавляем в родительский DOM-элемент дочерний DOM элемент
    * @param {Element | null} root - родительский DOM-элемент
-   * @param {CustomElement} node - дочерний DOM элемент
+   * @param {ElementOrNone} node - дочерний DOM элемент
    */
-  export function append(root: Element | null, node: CustomElement) {
+  export function append(root: Element | null, node: ElementOrNone) {
     if ((node !== null) && (root !== null)) {
       root.append(node);
     }
@@ -122,3 +123,42 @@ export function howManyDays(startDatetimeStr: string): number | null {
     }
     return null;
   }
+
+  /**
+   * Функция перемещивает массив алгоритмом Фишера-Йетса
+   * @param {Array<T>} array - массив
+   */
+  export function shuffle<T>(array: Array<T>): void {
+    let currentIndex = array.length;
+    while (currentIndex != 0) {
+      let randomIndex = Math.floor(Math.random() * currentIndex);
+      currentIndex--;
+      [array[currentIndex], array[randomIndex]] = [
+        array[randomIndex], array[currentIndex]];
+    }
+  }
+
+  /**
+   * Функция добавляет в URL новые поисковые параметры
+   * @param {string} key - ключ параметра
+   * @param {value } value - значение параметра
+   * @returns { IPage } - объект с данными обновленного URL
+   */
+  export function setURLParams(key: string, value: string): IPage {
+
+      // создаем объект для формированания строки поисковых параметров
+        const urlSearchParams = new URLSearchParams(window.location.search);
+        urlSearchParams.set(key, value);
+
+        // создаем объект с текущим путем и новыми параметрами страницы
+        const iPage: IPage = {
+            name: window.location.pathname,
+            search: urlSearchParams.toString(),
+        }
+
+        // добавляем в путь URL браузера новые поисковые параметры
+        window.history.replaceState(null, '', `${iPage.name}?${iPage.search}`)
+
+        // возвращаем объект с данными обновленного URL
+        return iPage;
+}

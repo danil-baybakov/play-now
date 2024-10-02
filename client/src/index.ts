@@ -4,16 +4,17 @@ import { ElementHeader } from './components/content/header/header';
 import { ElementAsaid } from './components/content/body/asaid/asaid';
 import { ListElementPlaylist } from './components/content/body/main/playlists/playlists';
 import { ListElementSong } from './components/content/body/main/songs/songs';
-import { ElementFooter } from './components/content/footer/footer';
+import { ElementPlayer } from './components/content/player/player';
 import { ElementModalAddPlaylist } from './components/modal/modal';
 import { SONGS, PLAYLISTS, USERS } from './mock/data';
-import { append, setSessionStorage, getSessionStorage } from './utils/utils';
+import { append, setSessionStorage, getSessionStorage, shuffle, setURLParams } from './utils/utils';
 import { CustomEvent } from './components/base/base';
-import { CustomElement, NavigatePath, IPage } from './types/types';
+import { ElementOrNone, IPage } from './types/types';
 import { REG_USER, USER } from './api/config';
-import { fetchRegister, fetchLogin, JwtDto } from './api/user/apiUser';
+import { fetchRegister, fetchLogin, fetchUserLikes } from './api/user/apiUser';
 import { fetchSearchSongs, fetchGetSongsById, fetchLikeSongsById, 
-    fetchUnlikeSongsById, fetchGetSongsPlaylistById, isLikeSong, Songs, Song } from './api/song/apiSong';
+    fetchUnlikeSongsById, fetchGetSongsPlaylistById, 
+    isLikeSong, Songs, Song } from './api/song/apiSong';
 import { Playlists, fetchGetUserPlaylists, fetchPlaylistsById } from './api/playlist/apiPlaylist';
 
 /**
@@ -21,25 +22,31 @@ import { Playlists, fetchGetUserPlaylists, fetchPlaylistsById } from './api/play
  */
 class App {
 
-    body: HTMLBodyElement | null  = null;  // DOM элемент - body - тело приложения
-    modalAddPlaylist: CustomElement | null = null; // DOM элемент - модальное окно добавления трека в плейлист
-    content: HTMLDivElement | null = null; // DOM элемент - основной контейнер
-    header: CustomElement | null = null; // DOM элемент - шапка приложения
-    wrapper: HTMLDivElement | null = null;  // DOM элемент - обертка центальной части контента
-    asaid: CustomElement | null = null;  // DOM элемент - меню
-    main: HTMLElement | null = null;  // DOM элемент - контейнер страниц
-    listSongs: CustomElement | null = null;   // DOM элемент - страница треков
-    listPlaylists: CustomElement | null = null;   // DOM элемент - страница плейлистов
-    footer: CustomElement | null = null; // DOM элемент - футер - блок управления музыкой
+    body: ElementOrNone  = null;  // DOM элемент - body - тело приложения
+    modalAddPlaylist: ElementOrNone = null; // DOM элемент - модальное окно добавления трека в плейлист
+    content: ElementOrNone  = null; // DOM элемент - основной контейнер
+    header: ElementOrNone  = null; // DOM элемент - шапка приложения
+    wrapper: ElementOrNone = null;  // DOM элемент - обертка центальной части контента
+    asaid: ElementOrNone = null;  // DOM элемент - меню
+    main: ElementOrNone = null;  // DOM элемент - контейнер страниц
+    listSongs: ElementOrNone = null;   // DOM элемент - страница треков
+    listPlaylists: ElementOrNone = null;   // DOM элемент - страница плейлистов
+    player: ElementOrNone = null; // DOM элемент - плеер
+
+    elementPlayer: ElementPlayer | null = null; //  класс для создания плеера
+
+    currentSongs: Songs = [];   // текущий список треков на странице
 
 
     constructor() {
-        // this.init();
+        this.init();
     }
 
-    async init() {
-        await this.login();
-        await this.render();
+    init() {
+        (async () => {
+            await this.login();
+            await this.render();
+        })();
     }
 
 
@@ -61,6 +68,8 @@ class App {
             const { access_token } = await fetchLogin(USER); 
             // сохраняем токен в sessionStorage
             setSessionStorage('token', access_token);
+            // сохраняем логин текущего ползьователя в sessionStorage
+            setSessionStorage('username', USER.username);
         }
     }
 
@@ -108,13 +117,13 @@ class App {
         ).element;
         append(this.wrapper, this.asaid);
 
-        // создаем и довавляем в обертку центальной части контента контейнер страниц
+        // создаем и довавляем в обертку центальной части контента контейнера страниц
         this.main = document.createElement("main");
         this.main.classList.add("main");
         this.wrapper.append(this.main);
 
         // отображаем текущую страницу
-        this.router({ name: window.location.pathname, search: ''});
+        await this.router({ name: window.location.pathname, search: ''});
         
         // вешаем обработчик события навигации по истории браузера 
         // осуществляет переход на страницу соответствующей текущему пути в URL
@@ -134,21 +143,30 @@ class App {
     /***
      * Обработчик клика по выбранному треку
      * @param {number} id - идентификатор элемента
-     * @param {CustomElement} e - объект события элемента
+     * @param {ElementOrNone} e - объект события элемента
     */
-    turnOnSong(id: number, e: CustomEvent): void {
-        this.footer?.remove();
-        if (SONGS) {
-            const footer = new ElementFooter(SONGS[id-1]).element;
-            append(this.content, footer);
-        }
+    turnOnSong(id: number, e: CustomEvent | null = null): void {
+        (async () => {
+            // по id получаем с API объект с данными трека
+            let song: Song;
+            try {
+                song = await fetchGetSongsById(getSessionStorage('token'), id);      
+            } catch(e) {
+                console.log(e)
+                return
+            }
+
+            this.renderPlayer(song);
+
+            setURLParams("songId", String(id));
+        })();
     }
 
     /***
     * Обработчик клика кнопки открытия модального окна 
     * с двумя возможными контестными действиями (удаления/добавления)
     * @param {number} id - идентификатор элемента
-    * @param {CustomElement} e - объект события элемента
+    * @param {ElementOrNone} e - объект события элемента
     */
     openDropdown(id: number, e: CustomEvent): void {
         // закрываеи все модальные окна Удаления/добавления трека 
@@ -165,7 +183,7 @@ class App {
     /***
     * Обработчик клика кнопки добавления трека в плейлист
     * @param {number} id - идентификатор элемента
-    * @param {CustomElement} e - объект события элемента
+    * @param {ElementOrNone} e - объект события элемента
     */
     addSong(id: number, e: CustomEvent): void {
         // открываем модальное окно добавления трека в плейлист
@@ -175,7 +193,7 @@ class App {
     /***
     * Обработчик клика кнопки удаления трека из плейлиста 
     * @param {number} id - идентификатор элемента
-    * @param {CustomElement} e - объект события элемента 
+    * @param {ElementOrNone} e - объект события элемента 
     */
     deleteSong(id: number, e: CustomEvent): void {
         // находим соответствующий элемент трека и удаляем его из DOM
@@ -186,38 +204,60 @@ class App {
     /***
     * Обработчик клика кнопки добавления трека в избранное
     * @param {number} id - идентификатор элемента
-    * @param {CustomElement} e - объект события элемента
+    * @param {ElementOrNone} e - объект события элемента
     */
-    async likeSong(id: number, e: CustomEvent) {
+    likeSong(id: number, e: CustomEvent) {
+        (async () => {
 
-        // по id получаем с API объект с данными трека
-        let song: Song;
-        try {
-            song = await fetchGetSongsById(getSessionStorage('token'), id);      
-        } catch(e) {
-            console.log(e)
-            return
-        }
+            let like = false; // статус трека - в избранном/ не в избранном 
 
-        try {
-            // если не стоит лайк
-            if (!isLikeSong(song, USER.username)) {
-                // делаем запрос на сервер чтобы поставить лайк
-                await fetchLikeSongsById(getSessionStorage('token'), id);
-            // иначе
-            } else {
-                // делаем запрос на сервер чтобы убрать лайк
-                await fetchUnlikeSongsById(getSessionStorage('token'), id);
+            // по id получаем с API объект с данными трека
+            let song: Song;
+            try {
+                song = await fetchGetSongsById(getSessionStorage('token'), id);      
+            } catch(e) {
+                console.log(e)
+                return
             }
-        } catch(e) {
-            console.log(e)
-            return
-        }
 
-        // находим соответствующую кнопку лайка и меняем ее состояние
-        // если она была активной делаем ее неактивной и наоборот
-        const likeBtn = document.querySelector(`[data-num_track_like_btn="${id}"]`);
-        likeBtn?.classList.toggle('like-btn--active');
+            // определяем текущий статус трека - в избранном или нет ??
+            like = isLikeSong(song, USER.username)
+
+            try {
+                // если не в избранном
+                if (!like) {
+                    // делаем запрос на сервер чтобы добавить трек в избранное
+                    await fetchLikeSongsById(getSessionStorage('token'), id);
+                    // отмечаем что трек стал избранным
+                    like = true;
+                // иначе
+                } else {
+                    // делаем запрос на сервер чтобы убрать трек из избранного
+                    await fetchUnlikeSongsById(getSessionStorage('token'), id);
+                    // отмечаем что трек стал не избранным
+                    like = false;
+                }
+            } catch(e) {
+                console.log(e)
+                return
+            }
+
+            // находим соответствующую кнопку лайка и меняем ее состояние
+            // если она была активной делаем ее неактивной и наоборот
+            const likeBtn = document.querySelector(`[data-num_track_like_btn="${id}"]`);
+            if (likeBtn) likeBtn?.classList.toggle('like-btn--active');
+
+            const likeBtnPlayer = document.querySelector(`[data-player_num_track_like_btn="${id}"]`);
+            if (likeBtnPlayer) likeBtnPlayer?.classList.toggle('like-btn--active');
+
+            // если открыта страница ибранных треков
+            // и трек удален из избранных, перерисовывам страницу
+            const urlPathName = window.location.pathname;
+            if (urlPathName === "/favorite") {
+                await this.router({ name: urlPathName, search: ''});
+            }
+
+        })();
 
     }
 
@@ -230,22 +270,41 @@ class App {
         // создаем объект для извлечения поисковых параметров
         const paramsFromUrl = new URLSearchParams(window.location.search);
      
-        // из URL получаем параметр со значением поискового запроса
-        const searchName = paramsFromUrl.get('search') || '';
+        // из URL получаем параметр со значением поискового запроса если есть такой
+        let searchName = paramsFromUrl.get('search') || '';
+        // если при переходе на страницу -  в URL нет параметра с поисковым запросом
+        if (searchName === '') {
+            const searchInputEl = document.querySelector('.header__search__field');
+            if (searchInputEl instanceof HTMLInputElement) {
+                const valueSearchInputEl = searchInputEl.value;
+                // и в поле поиска есть значение
+                if (valueSearchInputEl !== '') {
+                    // устанавливаем это значение в параметр URL
+                    setURLParams("search", valueSearchInputEl);
+                    // и используем для поиска
+                    searchName = valueSearchInputEl;
+                }
+            }
+        }
+
+        // из URL получаем параметр с Id текущего проигрываемого трека если есть такой
+        const songId = paramsFromUrl.get('songId') || null;
 
         // делаем все кнопки навигации неактивными
         document.querySelectorAll('.aside__btn').forEach(elem => {
             elem.classList.remove('aside__btn-active');
         })
 
-        // удаляем из DOM плеер (футер)
-        this.footer?.remove();
+
 
         // переход на страницу Треки
         if ((page.name === '/') || (page.name === '/favorite') || page.name.startsWith('/playlist-')) {
 
             // флаг - открыта страница конкретного плейлиста
             const selectPlaylist = page.name.startsWith('/playlist-');
+
+            // флаг - открываем страницу избранных треков
+            const selectPageSongsLike = page.name === '/favorite';
 
             // если открываем страницу конкретного плейлиста
             // из пути URL браузера извлекаем номер плейлиста 
@@ -262,25 +321,40 @@ class App {
             const title = !selectPlaylist ? ((page.name === '/') ? "Треки": "Избранное") : `${titlePleylist}`;
 
             // отрисовывам страницу с треками
-            const songs = await this.renderPageSongs(searchName, title, titlePleylist);
+            const songs = await this.renderPageSongs(searchName, title, titlePleylist, selectPageSongsLike);
 
-            if (!selectPlaylist) {
+            if (!selectPlaylist && !selectPageSongsLike) {
                 // кнопку навигации Треки делаем активной
                 document.querySelector('[data-path="/"]')?.classList.add('aside__btn-active');
+            } else if (selectPageSongsLike) {
+                // кнопку навигации Избранное делаем активной
+                document.querySelector('[data-path="/favorite"]')?.classList.add('aside__btn-active');
             } else {
                 // кнопку навигации Плейлист .. делаем активной
                 document.querySelector(`[data-path="playlist-${playlistId}"]`)?.classList.add('aside__btn-active');
             }
 
-            // создаем и добавлем в основной контейнер плееер (футер)
-            if (songs.length > 0) {
-                this.footer = new ElementFooter(songs[0]).element;
-                append(this.content, this.footer);
+            
+            // если в URL нет параметра с ID текущего выбранного трека
+            if (!songId) {
+                // в плеер выводим случайно выбранный трек
+                const song = this.renderPlayerRandom(songs, null, true);
+                if (song) {
+                    // и Id его добавляем в параметр URL
+                    setURLParams("songId", String(song.id));
+                }
+            // иначе в плеер выводим трек с ID из URL параметра
+            } else {
+                this.turnOnSong(Number(songId));
             }
+
+
         }
 
         // переход на страницу Плейлисты
         if (page.name === '/playlists') {
+            // удаляем из DOM плеер (футер)
+            this.player?.remove();
 
             // c API получаем список плейлистов
             let playlists: Playlists = [];
@@ -309,19 +383,20 @@ class App {
      * @param {string} name - наименование пути
      */
     navigate(name: string) {
+        (async () => {
+            // меняем путь в URL браузера
+            window.history.pushState(null, '', '/');
+            window.history.pushState(null, '', name);
 
-        // меняем путь в URL браузера
-        window.history.pushState(null, '', '/');
-        window.history.pushState(null, '', name);
+            // создаем объект с новым путем
+            const iPage: IPage = {
+                name: window.location.pathname,
+                search: "",
+            }
 
-        // создаем объект с новым путем
-        const iPage: IPage = {
-            name: window.location.pathname,
-            search: "",
-        }
-
-        // вызываем функцию роутинга на соответствующую страницу
-        this.router(iPage);
+            // вызываем функцию роутинга на соответствующую страницу
+            await this.router(iPage);
+        })();
     }
 
     /***
@@ -331,22 +406,14 @@ class App {
      * @param {string} value - значение URL параметра
      */
     setSearchParams(key: string, value: string, e: CustomEvent) {
+        (async () => {
+            
+            // добавляем в путь URL браузера новые поисковые параметры
+            const iPage = setURLParams(key, value);
 
-        // создаем объект для формированания строки поисковых параметров
-        const urlSearchParams = new URLSearchParams();
-        urlSearchParams.set(key, value);
-
-        // создаем объект с текущим путем и новыми параметрами страницы
-        const iPage: IPage = {
-            name: window.location.pathname,
-            search: urlSearchParams.toString(),
-        }
-
-        // добавляем в путь URL браузера новые поисковые параметры
-        window.history.replaceState(null, '', `${iPage.name}?${iPage.search}`)
-
-        // вызываем функцию роутинга на соответствующую страницу
-        this.router(iPage);
+            // вызываем функцию роутинга на соответствующую страницу
+            await this.router(iPage);
+        })();
     }
 
     /**
@@ -354,26 +421,41 @@ class App {
      * @param {Songs} songs - список треков (объекты с данными о треке)
      * @param {string} title - заголовок страницы
      */
-    async renderPageSongs(search: string, title: string, playlistId: string | null = null): Promise<Songs> {
+    async renderPageSongs(search: string, title: string, playlistId: string | null = null, likes: boolean = false): Promise<Songs> {
+
         // c API получаем список треков
         let songs: Songs = [];
-        try {
-            if (!playlistId) {
-                songs = await fetchSearchSongs(getSessionStorage('token'), search);
+        if (!playlistId) {
+            // полный
+            if (!likes) {
+                try {
+                    songs = await fetchSearchSongs(getSessionStorage('token'));
+                } catch(e) {console.log(e);}
+            // избрвнный
             } else {
-                const playlist_songs = await fetchGetSongsPlaylistById(getSessionStorage('token'), Number(playlistId));
-                songs = playlist_songs.filter(({ name }) =>
-                    name.toLowerCase().includes(search.toLowerCase())
-                );
+                try {
+                    const response = await fetchUserLikes(getSessionStorage('token'));
+                    songs = response.songLikes;
+                } catch(e) {console.log(e);}
             }
-        } catch(e) {console.log(e);}
+        } else {
+            // по отдельному плейлисту
+            try {
+                songs = await fetchGetSongsPlaylistById(getSessionStorage('token'), Number(playlistId));
+            } catch(e) {console.log(e);}
+        }
+
+        // фильтруем треки
+        const filterSongs = songs.filter(({ name }) =>
+            name.toLowerCase().includes(search.toLowerCase())
+        );
 
         // вызываем функцию очистки контейнера страниц
         this.clearPageContainer()
 
         // создаем и довавляем контейнер страниц элемент страницы треков
         this.listSongs = new ListElementSong(
-            songs, 
+            filterSongs, 
             USER.username,
             title,
             this.turnOnSong.bind(this),
@@ -384,6 +466,7 @@ class App {
         ).element;
         append(this.main, this.listSongs);
 
+        // возвращаем список треков
         return songs
     }
 
@@ -409,12 +492,72 @@ class App {
         if (this.main instanceof HTMLElement) this.main.innerHTML = '';
     }
 
+    /**
+     * Функция отрисовки футера (плеера) случайным выбором из списка треков
+     * @param { Songs } songs - список треков
+     * @param { number | null } songId - Id трека (по умолчанию id трека не заданно)
+     * @param { boolean } mix - флаг способа выбора трека, если Id не заданно (по умолчанию 0)
+     * 0 - по порядку первый в списке треков
+     * 1 - в случайном порядке
+     */
+    renderPlayerRandom(songs: Songs, songId: number | null = null, mix: boolean = false): Song | undefined { 
+
+        // если список треков не пустой
+        if (songs.length > 0) {
+
+            let song: Song | null;
+
+            // если id не заданно
+            if (songId == null) {
+                // если установлен флаг mix
+                // перемешиваем список треков
+                if (mix) {
+                    shuffle(songs);
+                }  
+                // выбираем первый из списка треков
+                song = songs[0];  
+            // иначе выбираем конкретный трек по id
+            } else {
+                song = songs[songId]; 
+            }
+
+
+            // создаем и добавляем в DOM футер (плеер)
+            this.renderPlayer(song);
+
+            // возвращаем выбранный трек
+            return song;
+
+        }
+
+    }
+
+    /**
+     * Функция отрисовки футера (плеера)
+     * @param { Song } song - трек
+     */
+    renderPlayer(song: Song) {
+
+        // удаляем старый футер
+        this.player?.remove(); 
+
+        // создаем новый футер с плеером
+        this.elementPlayer = new ElementPlayer(
+            song, 
+            USER.username,
+            true,
+            this.likeSong.bind(this),
+        );
+        this.player = this.elementPlayer.element;
+
+        append(this.content, this.player);        
+    }
+
 
 }
 
 // создание класса приложения
 const app = new App();
-app.init().then(() => {});
 
 
 
