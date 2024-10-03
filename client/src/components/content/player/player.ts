@@ -13,15 +13,32 @@ type AudioStatus = {
     volume: number;
 }
 
+interface PlayerProps {
+    song: Song,
+    username?: string,
+    status?: {
+        start?: boolean,
+        playMode?: 0 | 1 | 2,
+    }
+    handlers?: {
+        like?: (id: number, e?: CustomEvent) => void,
+        ended?: (id?: number) => void,
+        staffle?: (id?: number) => void,
+        next?: (id?: number) => void,
+        prev?: (id?: number) => void,
+        repeat?: (id?: number) => void,
+    }
+}
+
 
 
 export class ElementPlayer extends BaseElement {
 
-    id: number | null = null;  // идентификатор трека
+    id?: number;  // идентификатор трека
 
-    private audioCtx: AudioContext | null = null; // аудиоконтекст
-    private sourceNode: MediaElementAudioSourceNode | undefined = undefined // аудио источник
-    private gainNode: GainNode | null = null; // интерфейс изменения громкости воспроизведения трека
+    private audioCtx?: AudioContext; // аудиоконтекст
+    private sourceNode?: MediaElementAudioSourceNode // аудио источник
+    private gainNode?: GainNode; // интерфейс изменения громкости воспроизведения трека
 
     // объект статуса воспроизведения трека
     audioStatus: AudioStatus = {
@@ -38,7 +55,7 @@ export class ElementPlayer extends BaseElement {
     btnPlayPauseSongEl: HTMLElementOrNone= null; // кнопка Воспроизвести/Пауза
     btnSkipnextSongEl: HTMLElementOrNone= null; // кнопка Вперед
     btnRepeatSongEl: HTMLElementOrNone= null; // кнопка На повтор
-    audioEl: HTMLMediaElement | null | undefined = null; // аудиопроигрыватель
+    audioEl?: HTMLMediaElement | null | undefined = null; // аудиопроигрыватель
     currentTimeEl: HTMLElementOrNone= null; // элемент с текущим временем воспроизведения трека
     processBarEl: HTMLElementOrNone= null; // процесс бар воспроизведения трека
     durationEl: HTMLElementOrNone= null; // элемент с длительностью воспроизведения трека
@@ -46,11 +63,7 @@ export class ElementPlayer extends BaseElement {
 
 
     constructor(
-      private song: Song,
-      private username: string = '',
-      private startPlay: boolean = false,
-      private handlerLikeSong: (id: number, e: CustomEvent) => void,
-      private handlerSongEnded: () => void = () => {}
+        private props: PlayerProps,
     ) {
       super();
       this.itit();
@@ -58,11 +71,11 @@ export class ElementPlayer extends BaseElement {
 
     itit() {
 
+        // добавляем в класс идентификатор трека как свойство
+        this.id = Number(this.props.song.id);
+
         // формируем DOM-элемент класса
         this.getElement();
-
-        // добавляем в класс идентификатор трека как свойство
-        this.id = Number(this.song.id);
 
         // в свойства класса добавляем элементы
         // кнопка добавления трека в избранное
@@ -117,18 +130,18 @@ export class ElementPlayer extends BaseElement {
   
     getTemplate(): void {
       this.template = `
-        <footer class="footer" data-id-song=${this.song.id}>
+        <footer class="footer" data-id-song=${this.props.song.id}>
             <div class="player flex">
-                <audio class="player__audio" ${this.startPlay ? "autoplay" : ''} controls crossorigin="anonymous" style="display: none">
-                    <source src="${ORIGIN}${this.song.path}" type="audio/mpeg">
+                <audio class="player__audio" ${this.props.status?.start ? "autoplay" : ''} controls crossorigin="anonymous" style="display: none">
+                    <source src="${ORIGIN}${this.props.song.path}" type="audio/mpeg">
                 </audio>
                 <div class="player__track-name flex">
-                    <img class="player__track__img" src=${this.song.image}
+                    <img class="player__track__img" src=${this.props.song.image}
                         alt="Histoire Sans Nom - Ludovico Einaudi, Czech National Symphony Orchestra">
                     <div class="player__track-name__content">
                         <div class="flex player__name__header">
-                            <h3 class="player__track__h3">${this.song.name}</h3>
-                            <button class="player__track__like ${isLikeSong(this.song, this.username) ? 'like-btn--active' : ''}" data-player_num_track_like_btn=${this.id}>
+                            <h3 class="player__track__h3">${this.props.song.name}</h3>
+                            <button class="player__track__like ${isLikeSong(this.props.song, this.props.username || '') ? 'like-btn--active' : ''}" data-player_num_track_like_btn=${this.id}>
                                 <svg width="22" height="18" viewBox="0 0 22 18" fill="none"
                                     xmlns="http://www.w3.org/2000/svg">
                                     <path
@@ -137,12 +150,12 @@ export class ElementPlayer extends BaseElement {
                                 </svg>
                             </button>
                         </div>
-                        <p class="player__track__author">${this.song.artist.name}</p>
+                        <p class="player__track__author">${this.props.song.artist.name}</p>
                     </div>
                 </div>
                 <div class="player__controls">
                     <div class="player__controls__header">
-                        <button class="player__shaffle-btn">
+                        <button class="player__shaffle-btn ${this.props.status?.playMode === 1 ? "active" : ""}">
                             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"
                                 xmlns="http://www.w3.org/2000/svg">
                                 <path
@@ -184,7 +197,7 @@ export class ElementPlayer extends BaseElement {
                                     fill="#AAAAAA" />
                             </svg>
                         </button>
-                        <button class="player__repeat-btn"><svg width="14" height="12" viewBox="0 0 14 12" fill="none"
+                        <button class="player__repeat-btn ${this.props.status?.playMode === 2 ? "active" : ""}""><svg width="14" height="12" viewBox="0 0 14 12" fill="none"
                                 xmlns="http://www.w3.org/2000/svg">
                                 <path
                                     d="M1 6.50001C1.13261 6.5 1.25978 6.44732 1.35355 6.35356C1.44731 6.25979 1.49999 6.13262 1.5 6.00001C1.50105 5.07207 1.87013 4.18244 2.52628 3.52629C3.18243 2.87014 4.07206 2.50106 5 2.50001H11.7929L11.1464 3.14646C11.0527 3.24024 11 3.36742 11 3.50003C11 3.63264 11.0527 3.75982 11.1465 3.85359C11.2402 3.94735 11.3674 4.00003 11.5 4.00002C11.6326 4.00002 11.7598 3.94733 11.8536 3.85356L13.3536 2.35356C13.3553 2.35188 13.3567 2.34999 13.3583 2.34828C13.3681 2.33824 13.3777 2.32792 13.3866 2.31706C13.3918 2.31065 13.3964 2.3039 13.4013 2.29731C13.4061 2.29084 13.4112 2.28453 13.4157 2.27781C13.4208 2.27015 13.4252 2.26222 13.4299 2.25438C13.4336 2.24821 13.4374 2.24223 13.4408 2.23591C13.4451 2.22797 13.4487 2.21983 13.4525 2.21174C13.4556 2.20503 13.459 2.19844 13.4618 2.19154C13.4651 2.1837 13.4677 2.1757 13.4706 2.16774C13.4732 2.16029 13.4761 2.15297 13.4784 2.14537C13.4808 2.13734 13.4826 2.12916 13.4846 2.12104C13.4865 2.11336 13.4887 2.10572 13.4903 2.09788C13.4922 2.08845 13.4933 2.0789 13.4946 2.06935C13.4956 2.06272 13.4968 2.05622 13.4975 2.04951C13.5008 2.01659 13.5008 1.98343 13.4975 1.95051C13.4968 1.9438 13.4956 1.9373 13.4946 1.93067C13.4933 1.92112 13.4922 1.91157 13.4903 1.90214C13.4887 1.8943 13.4865 1.88667 13.4846 1.87898C13.4826 1.87086 13.4808 1.86268 13.4784 1.85466C13.4761 1.84706 13.4732 1.83973 13.4706 1.83229C13.4677 1.82432 13.4651 1.81633 13.4618 1.80848C13.459 1.80159 13.4556 1.79499 13.4525 1.78828C13.4487 1.78019 13.4451 1.77204 13.4408 1.76411C13.4374 1.75779 13.4336 1.75181 13.4299 1.74565C13.4252 1.7378 13.4208 1.72987 13.4157 1.72221C13.4112 1.71549 13.4061 1.70918 13.4013 1.70271C13.3964 1.69612 13.3918 1.68937 13.3866 1.68296C13.3775 1.67189 13.3678 1.66139 13.3578 1.65113C13.3563 1.64964 13.3551 1.64796 13.3536 1.64647L11.8536 0.146465C11.7598 0.0526909 11.6326 5.74377e-06 11.5 4.69616e-10C11.3674 -5.74283e-06 11.2402 0.0526683 11.1465 0.146435C11.0527 0.240201 11 0.367378 11 0.49999C11 0.632601 11.0527 0.759783 11.1464 0.853558L11.7929 1.50001H5C3.80694 1.50135 2.66313 1.97589 1.8195 2.81951C0.975881 3.66314 0.501344 4.80695 0.5 6.00001C0.500006 6.13262 0.552687 6.25979 0.646454 6.35356C0.740221 6.44732 0.867394 6.5 1 6.50001Z"
@@ -224,7 +237,7 @@ export class ElementPlayer extends BaseElement {
         // обработка события нажатия на кнопку добавления трека в избранное
         this.btnLikeSongEl?.addEventListener('click', (e: CustomEvent) => {
             e.preventDefault();
-            if (this.id) this.handlerLikeSong(this.id, e);
+            if (this.props.handlers?.like && this.id) this.props.handlers.like(this.id, e);
         });
 
         // обработка события нажатия на кнопку Воспроизвести/Пауза
@@ -236,11 +249,34 @@ export class ElementPlayer extends BaseElement {
         // обработка события нажатия на кнопку Перемешать
         this.btnShaffleSongEl?.addEventListener('click', (e: CustomEvent) => {
             e.preventDefault();
+            if (this.props.handlers?.staffle) {
+                this.props.handlers?.staffle(this.id);
+            }
         });
 
         // обработка события нажатия на кнопку Назад
+        this.btnSkipbackSongEl?.addEventListener('click', (e: CustomEvent) => {
+            e.preventDefault();
+            if (this.props.handlers?.prev) {
+                this.props.handlers?.prev(this.id);
+            }
+        })
+
         // обработка события нажатия на кнопку Вперед
+        this.btnSkipnextSongEl?.addEventListener('click', (e: CustomEvent) => {
+            e.preventDefault();
+            if (this.props.handlers?.next) {
+                this.props.handlers?.next(this.id);
+            }
+        })
+
         // обработка события нажатия на кнопку Повтор
+        this.btnRepeatSongEl?.addEventListener('click', (e: CustomEvent) => {
+            e.preventDefault();
+            if (this.props.handlers?.repeat) {
+                this.props.handlers?.repeat(this.id);
+            }
+        })
 
         // обработка события передвижения ползунка процесс бара воспроизведения трека 
         // для премотки в нужное место воспроизведения трека
@@ -302,7 +338,7 @@ export class ElementPlayer extends BaseElement {
             // меняем отображение кнопки воспроиведения
             this.btnPlayPauseSongEl?.classList.remove('play');
 
-            this.handlerSongEnded();
+            if (this.props.handlers?.ended) this.props.handlers.ended(this.id);
         });
 
     }

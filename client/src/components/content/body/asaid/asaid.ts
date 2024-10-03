@@ -3,12 +3,17 @@ import { Playlists, Playlist } from "../../../../api/playlist/apiPlaylist";
 import { CustomEvent } from "../../../base/base";
 import { IPage } from "../../../../types/types";
 
+interface AsaidProps {
+  playlists: Playlists,
+  handlers?: {
+    navigate?: (page: string) => void
+  }
+}
 
 export class ElementAsaid extends BaseElement {
 
     constructor(
-      private playlists: Playlists,
-      private handlerNavigate: (page: string) => void
+      private props: AsaidProps,
     ) {
       super();
       this.getElement();
@@ -17,8 +22,12 @@ export class ElementAsaid extends BaseElement {
   
     getTemplate(): void {      
         let htmlButtonPlaylistLists: string = '';
-        for (const key in this.playlists) {
-            const elementButtonPlaylist = new ElementButtonPlaylist(this.playlists[key]);
+        for (const key in this.props.playlists) {
+            const elementButtonPlaylist = new ElementButtonPlaylist(
+              {
+                playlist: this.props.playlists[key],
+              }
+            );
             htmlButtonPlaylistLists += elementButtonPlaylist.template;
         }
         this.template = `
@@ -80,7 +89,7 @@ export class ElementAsaid extends BaseElement {
 
           if (elem instanceof HTMLElement) {
             const path  =  elem.dataset["path"] ? elem.dataset["path"] : '';
-            this.handlerNavigate(path);
+            if (this.props.handlers?.navigate) this.props.handlers?.navigate(path);
           }
         })
       })
@@ -89,10 +98,14 @@ export class ElementAsaid extends BaseElement {
   
   }
 
+interface ButtonPlaylistProps {
+  playlist: Playlist,
+}
+
 export class ElementButtonPlaylist extends BaseElement {
 
     constructor(
-      private playlist: Playlist
+      private props: ButtonPlaylistProps,
     ) {
       super();
       this.getElement();
@@ -101,7 +114,7 @@ export class ElementButtonPlaylist extends BaseElement {
     getTemplate(): void {
       this.template = `                   
         <li class="aside__item">
-            <button class="aside__btn" data-path=playlist-${this.playlist.id}>${this.playlist.name}</button>
+            <button class="aside__btn" data-path=playlist-${this.props.playlist.id}>${this.props.playlist.name}</button>
         </li>
       `; 
     }

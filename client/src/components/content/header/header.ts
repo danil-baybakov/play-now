@@ -1,13 +1,18 @@
-import urlIngUser from "../../../assets/image/common/user.jpg";
 import { BaseElement } from "../../base/base";
 import { User } from "../../../api/user/apiUser";
 
+interface HeaderProps {
+    user: User,
+    url_avatar?: string,
+    handlers?: {
+        search?: (key: string, value: string, e: CustomEvent) => void,
+    }
+}
 
 export class ElementHeader extends BaseElement {
 
     constructor(
-      private user: User,
-      private handlerSearch: (key: string, value: string, e: CustomEvent) => void,
+      private props: HeaderProps,
     ) {
       super();
       this.getElement();
@@ -31,8 +36,8 @@ export class ElementHeader extends BaseElement {
                 <div class="header__search">
                     <input class="header__search__field" type="search" placeholder="ЧТО БУДЕМ ИСКАТЬ?">
                 </div>
-                <button class="header__user" disabled><img class="header__user__img" src="${urlIngUser}"
-                    alt="Изображение пользователя"><span class="header__user__text">${this.user.username}</span><svg
+                <button class="header__user" disabled><img class="header__user__img" src="${this.props.url_avatar || ''}"
+                    alt="Изображение пользователя"><span class="header__user__text">${this.props.user.username}</span><svg
                     class="header__user__svg" width="6" height="11" viewBox="0 0 6 11" fill="none"
                     xmlns="http://www.w3.org/2000/svg">
                     <path fill-rule="evenodd" clip-rule="evenodd"
@@ -60,7 +65,7 @@ export class ElementHeader extends BaseElement {
                     key: "search",
                     value: target.value
                 }
-                this.handlerSearch(searchParams.key, searchParams.value, e as CustomEvent)
+                if (this.props.handlers?.search) this.props.handlers?.search(searchParams.key, searchParams.value, e as CustomEvent)
             })
         }
       }

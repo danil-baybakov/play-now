@@ -5,10 +5,14 @@ import urlImgPlaylist from "../../../../../assets/image/playlists/playlists.jpg"
 import urlImgPlaylist360 from "../../../../../assets/image/playlists/playlists__360.jpg";
 import urlImgPlaylist1440 from "../../../../../assets/image/playlists/playlists__1440.jpg";
 
+interface PlaylistsProps {
+  playlists: Playlists
+}
+
 export class ListElementPlaylist extends BaseElement {
 
     constructor(
-      private playlists: Playlists,
+      private props: PlaylistsProps,
     ) {
       super();
       this.getElement();
@@ -16,8 +20,12 @@ export class ListElementPlaylist extends BaseElement {
   
     getTemplate(): void {
       let htmlPlaylistList: string = '';
-      for (const key in this.playlists) {
-        const elementPlaylist = new ElementPlaylist(this.playlists[key]);
+      for (const key in this.props.playlists) {
+        const elementPlaylist = new ElementPlaylist(
+          {
+            playlist: this.props.playlists[key],
+          }  
+        );
         htmlPlaylistList += elementPlaylist.template;
       }
       this.template = `
@@ -32,11 +40,14 @@ export class ListElementPlaylist extends BaseElement {
   
   }
 
+interface PlaylistProps {
+  playlist: Playlist,
+}
 
 export class ElementPlaylist extends BaseElement {
 
   constructor(
-    private playlist: Playlist
+    private props: PlaylistProps,
   ) {
     super();
     this.getElement();
@@ -48,11 +59,11 @@ export class ElementPlaylist extends BaseElement {
             <picture>
                 <source srcset=${urlImgPlaylist360} media="(max-width: 576px)">
                 <source srcset=${urlImgPlaylist1440} media="(max-width: 1440px)"><img class="playlist__img"
-                    src=${urlImgPlaylist} alt=${this.playlist.name}>
+                    src=${urlImgPlaylist} alt=${this.props.playlist.name}>
             </picture>
             <div class="playlist__content">
-                <h3 class="playlist__h3"><a class="playlist__h3__link" href="/playlist-${this.playlist.id}">${this.playlist.name}</a></h3><span
-                    class="playlist__count">${this.playlist.songs.length > 0 ? this.playlist.songs.length : "Нет"} треков</span>
+                <h3 class="playlist__h3"><a class="playlist__h3__link" href="/playlist-${this.props.playlist.id}">${this.props.playlist.name}</a></h3><span
+                    class="playlist__count">${this.props.playlist.songs.length > 0 ? this.props.playlist.songs.length : "Нет"} треков</span>
             </div>
         </li>
     `; 

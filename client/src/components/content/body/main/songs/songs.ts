@@ -5,18 +5,24 @@ import { number } from 'zod';
 import { CustomEvent } from '../../../../base/base';
 import { isLikeSong } from '../../../../../api/song/apiSong';
 
+interface SongsProps {
+  songs: Songs,
+  username?: string,
+  title?: string,
+  handlers?: {
+    turnOnSong?: (id: number, e?: CustomEvent) => void
+    openDropdown?: (id: number, e?: CustomEvent) => void,
+    addSong?: (id: number, e?: CustomEvent) => void,
+    deleteSong?: (id: number, e?: CustomEvent) => void,
+    likeSong?: (id: number, e?: CustomEvent) => void,
+  }
+}
+
 
 export class ListElementSong extends BaseElement {
 
   constructor(
-    private songs: Songs,
-    private username: string,
-    private title: string | null,
-    private handlerTurnOnSong: (id: number, e: CustomEvent | null) => void,
-    private handlerOpenDropdown: (id: number, e: CustomEvent) => void,
-    private handlerAddSong: (id: number, e: CustomEvent) => void,
-    private handlerDeleteSong: (id: number, e: CustomEvent) => void,
-    private handlerLikeSong: (id: number, e: CustomEvent) => void,
+    private props: SongsProps,
   ) {
     super();
     this.getElement();
@@ -26,13 +32,19 @@ export class ListElementSong extends BaseElement {
 
   getTemplate(): void {
     let htmlSongList: string = '';
-    for (const key in this.songs) {
-      const elementSong = new ElementSong(this.songs[key], Number(key) + 1, this.username);
+    for (const key in this.props.songs) {
+      const elementSong = new ElementSong(
+        {
+            song: this.props.songs[key],
+            number: Number(key) + 1,
+            username: this.props.username
+        }
+    );
       htmlSongList += elementSong.template;
     }
     this.template = `
         <section class="tracks section tabs-content section--active" data-target="tracks">
-          <h2 class="tracks__h2 title__h2">${this.title}</h2>
+          <h2 class="tracks__h2 title__h2">${this.props.title || "Нет заголовка"}</h2>
           <div class="tracks__content">
             <div class="tracks__header flex">
               <div class="tracks__header__number">№</div>
@@ -71,43 +83,48 @@ export class ListElementSong extends BaseElement {
     function handler(
       elem: Element,
       nameDatasetNum: string, 
-      funcHandler: (id: number, e: Event) => void
+      funcHandler?: (id: number, e?: CustomEvent) => void
     ):void {
-        let id: number;
-        if (elem instanceof HTMLElement) {
-          id = Number(elem.dataset[nameDatasetNum]);
-          if (id) elem.addEventListener('click', (e) => {
-            e.preventDefault();
-            funcHandler(id, e);
-          })
+        if (funcHandler) {
+            let id: number;
+            if (elem instanceof HTMLElement) {
+              id = Number(elem.dataset[nameDatasetNum]);
+              if (id) elem.addEventListener('click', (e) => {
+                e.preventDefault();
+                funcHandler(id, e);
+              })
+          }
         }
     }
 
     const listSong = this.element?.querySelectorAll('.track__name__link');
-    listSong?.forEach(elem => handler(elem, 'num_track_link', this.handlerTurnOnSong));
+    listSong?.forEach(elem => handler(elem, 'num_track_link', this.props.handlers?.turnOnSong));
 
     const listBtnOpenDropdown = this.element?.querySelectorAll('.track__btn-dropdown');
-    listBtnOpenDropdown?.forEach(elem => handler(elem, 'num_track_btn_dropdown', this.handlerOpenDropdown));
+    listBtnOpenDropdown?.forEach(elem => handler(elem, 'num_track_btn_dropdown', this.props.handlers?.openDropdown));
 
     const listBtnAdd = this.element?.querySelectorAll('.track__add-btn');
-    listBtnAdd?.forEach(elem => handler(elem, 'num_track_add_btn', this.handlerAddSong));
+    listBtnAdd?.forEach(elem => handler(elem, 'num_track_add_btn', this.props.handlers?.addSong));
 
     const listBtnDelete = this.element?.querySelectorAll('.track__delete-btn');
-    listBtnDelete?.forEach(elem => handler(elem, 'num_track_delete_btn', this.handlerDeleteSong));
+    listBtnDelete?.forEach(elem => handler(elem, 'num_track_delete_btn', this.props.handlers?.deleteSong));
 
     const listBtnLike = this.element?.querySelectorAll('.track__like-btn');
-    listBtnLike?.forEach(elem => handler(elem, 'num_track_like_btn', this.handlerLikeSong));
+    listBtnLike?.forEach(elem => handler(elem, 'num_track_like_btn', this.props.handlers?.likeSong));
   }
 
 }
 
+interface SongProps {
+  song: Song, 
+  number?: number,
+  username?: string,
+}
 
 export class ElementSong extends BaseElement {
 
   constructor(
-    private song: Song, 
-    private number: number = 0,
-    private username: string = '',
+    private props: SongProps
   ) {
     super();
     this.getElement();
@@ -116,27 +133,27 @@ export class ElementSong extends BaseElement {
   getTemplate(): void {
 
     this.template = `
-        <li class="tracks__item flex" data-num_tracks_item=${this.song.id}>
+        <li class="tracks__item flex" data-num_tracks_item=${this.props.song.id}>
 
-            <div class="tracks__item__number">${this.number}</div>
+            <div class="tracks__item__number">${this.props.number || '-'}</div>
 
             <div class="tracks__item__name">
-                <img class="track__img" src=${this.song.image} alt="In Bloom">
+                <img class="track__img" src=${this.props.song.image} alt="In Bloom">
                 <div class="track__content">
                     <h3 class="track__name">
-                        <a class="track__name__link" href="##" data-num_track_link=${this.song.id}>${this.song.name}</a>
+                        <a class="track__name__link" href="##" data-num_track_link=${this.props.song.id}>${this.props.song.name}</a>
                     </h3>
                     <span class="track__author">
-                      ${this.song.artist.name}
+                      ${this.props.song.artist.name}
                     </span>
                 </div>
             </div>
 
-            <div class="tracks__item__albom">${this.song.album.name}</div>
+            <div class="tracks__item__albom">${this.props.song.album.name}</div>
 
             <div class="tracks__item__data flex">
-                <span class="data__text">${howManyDays(this.song.createdAt)} дней назад</span>
-                <button class="track__like-btn ${isLikeSong(this.song, this.username) ? 'like-btn--active' : ''}" data-num_track_like_btn=${this.song.id}>
+                <span class="data__text">${howManyDays(this.props.song.createdAt)} дней назад</span>
+                <button class="track__like-btn ${isLikeSong(this.props.song, this.props.username || '') ? 'like-btn--active' : ''}" data-num_track_like_btn=${this.props.song.id}>
                     <svg width="22" height="18" viewBox="0 0 22 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path
                             d="M15.5022 8.2786e-06C14.6291 -0.00149138 13.7677 0.200775 12.9865 0.590718C12.2052 0.980661 11.5258 1.54752 11.0022 2.24621C10.293 1.30266 9.30512 0.606001 8.17823 0.254823C7.05134 -0.0963541 5.84256 -0.0842713 4.72291 0.289363C3.60327 0.662997 2.62948 1.37926 1.93932 2.3368C1.24916 3.29434 0.877596 4.44467 0.877197 5.62501C0.877197 12.3621 10.2373 17.6813 10.6357 17.9044C10.7477 17.9671 10.8739 18 11.0022 18C11.1305 18 11.2567 17.9671 11.3687 17.9044C13.0902 16.8961 14.7059 15.7173 16.1914 14.3856C19.4665 11.438 21.1272 8.49047 21.1272 5.62501C21.1255 4.13368 20.5323 2.70393 19.4778 1.6494C18.4233 0.594873 16.9935 0.00169855 15.5022 8.2786e-06V8.2786e-06Z"
@@ -144,9 +161,9 @@ export class ElementSong extends BaseElement {
                     </svg>
                 </button>
             </div>
-            <time class="tracks__item__time">${convertMsToTime(this.song.duration)}</time>
+            <time class="tracks__item__time">${convertMsToTime(this.props.song.duration)}</time>
             <div class="tracks__item__drop">
-                <button class="track__btn-dropdown" data-num_track_btn_dropdown=${this.song.id}>
+                <button class="track__btn-dropdown" data-num_track_btn_dropdown=${this.props.song.id}>
                     <svg width="23" height="4" viewBox="0 0 23 4" fill="none"
                         xmlns="http://www.w3.org/2000/svg">
                         <circle cx="2" cy="2" r="2" fill="#C4C4C4" />
@@ -154,9 +171,9 @@ export class ElementSong extends BaseElement {
                         <circle cx="21" cy="2" r="2" fill="#C4C4C4" />
                     </svg>
                 </button>
-                <div class="track__dropdown" data-num_track_dropdown=${this.song.id}>
-                    <button class="track__add-btn" data-num_track_add_btn=${this.song.id}>Добавить в плейлист</button>
-                    <button class="track__delete-btn" data-num_track_delete_btn=${this.song.id}>Удалить из плейлиста</button>
+                <div class="track__dropdown" data-num_track_dropdown=${this.props.song.id}>
+                    <button class="track__add-btn" data-num_track_add_btn=${this.props.song.id}>Добавить в плейлист</button>
+                    <button class="track__delete-btn" data-num_track_delete_btn=${this.props.song.id}>Удалить из плейлиста</button>
                 </div>
             </div>
         </li>
