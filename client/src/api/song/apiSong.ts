@@ -21,6 +21,20 @@ export type Song = {
 
 export type Songs = Song[]
 
+export type SongAndStatus= {
+    song: Song,
+    playEnded: boolean
+}
+
+export type ListSongAndStatus = SongAndStatus[];
+
+export type SongsPlayer = {
+    songs: ListSongAndStatus,
+    repeat: boolean,
+    shaffle: boolean,
+}
+
+
 
 /**
  * Функция запроса к API
@@ -130,6 +144,42 @@ export function fetchGetSongsPlaylistById(token: string, id: number): Promise<So
 export function isLikeSong(song: Song, username: string): boolean {
     return song.likes.filter(v => v.username == username).length > 0;
 }
+
+/**
+ * Функция создает из массива треков типа Songs  
+ * массив треков со статусом воспроизведения
+ * @param {Songs} songs 
+ * @returns {ListSongAndStatus} массив треков со статусом воспроизведения
+ */
+export function createListSongAndStatus(songs: Songs): ListSongAndStatus {
+    const listSongAndStatus: ListSongAndStatus = []
+    songs.forEach(song => {
+        listSongAndStatus.push({song: song, playEnded: false});
+    })
+    return listSongAndStatus;
+}
+
+export function  getIndexListSongAndStatusById(listSongAndStatus: ListSongAndStatus, songId: number): number | undefined {
+    if (!listSongAndStatus) return;
+
+    for (const index in listSongAndStatus) {
+        if (listSongAndStatus[index].song.id == songId) return Number(index);
+    }
+}
+
+    
+
+export function getNextSongFromSongsPlayer(listSongAndStatus: ListSongAndStatus, curentSongId: number, shaffle?: boolean): Song | undefined {
+    if (!listSongAndStatus) return;
+
+    const currentIndex = getIndexListSongAndStatusById(listSongAndStatus, curentSongId);
+
+
+    if (currentIndex !== undefined)
+        return listSongAndStatus[currentIndex + 1].song;
+
+}
+
 
 
 

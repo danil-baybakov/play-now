@@ -8,7 +8,7 @@ import { ListElementSong } from './components/content/body/main/songs/songs';
 import { ElementPlayer } from './components/content/player/player';
 import { ElementModalAddPlaylist } from './components/modal/modal';
 import { SONGS, PLAYLISTS, USERS } from './mock/data';
-import { append, setSessionStorage, getSessionStorage, shuffle, setURLParams } from './utils/utils';
+import { append, setSessionStorage, getSessionStorage, shuffle, setURLParams, getURLParamByKey } from './utils/utils';
 import { CustomEvent } from './components/base/base';
 import { ElementOrNone, IPage } from './types/types';
 import { REG_USER, USER } from './api/config';
@@ -16,9 +16,11 @@ import { fetchRegister, fetchLogin, fetchUserLikes } from './api/user/apiUser';
 import {
     fetchSearchSongs, fetchGetSongsById, fetchLikeSongsById,
     fetchUnlikeSongsById, fetchGetSongsPlaylistById,
-    isLikeSong, Songs, Song
+    isLikeSong, Songs, Song, SongsPlayer, createListSongAndStatus, getNextSongFromSongsPlayer
 } from './api/song/apiSong';
 import { Playlists, fetchGetUserPlaylists, fetchPlaylistsById } from './api/playlist/apiPlaylist';
+
+
 
 /**
  * Основной класс для создания приложения
@@ -38,7 +40,11 @@ class App {
 
     player?: ElementPlayer; //  класс для создания плеера
 
-    currentSongs: Songs = [];   // текущий список треков на странице
+    songsPlayer: SongsPlayer = {
+        songs: [],
+        repeat: false,
+        shaffle: false
+    }; // список воспоизведения плеера
 
 
     constructor() {
@@ -285,11 +291,15 @@ class App {
      */
     async router(page: IPage) {
 
-        // создаем объект для извлечения поисковых параметров
-        const paramsFromUrl = new URLSearchParams(window.location.search);
+        // из URL получаем параметр shaffle и repeat
+        // в объекте класса со списоком воспоизведения плеера 
+        // обновляем соответствующие значения shaffle и repeat полученными значениями из URL
+        this.songsPlayer.shaffle = getURLParamByKey('shaffle', '0', 'bool');
+        this.songsPlayer.repeat = getURLParamByKey('repeat', '0', 'bool');
 
         // из URL получаем параметр со значением поискового запроса если есть такой
-        let searchName = paramsFromUrl.get('search') || '';
+        let searchName = getURLParamByKey('search', '');
+
         // если при переходе на страницу -  в URL нет параметра с поисковым запросом
         if (searchName === '') {
             const searchInputEl = document.querySelector('.header__search__field');
@@ -306,7 +316,7 @@ class App {
         }
 
         // из URL получаем параметр с Id текущего проигрываемого трека если есть такой
-        const songId = paramsFromUrl.get('songId') || null;
+        const songId = getURLParamByKey('songId', null);
 
         // делаем все кнопки навигации неактивными
         document.querySelectorAll('.aside__btn').forEach(elem => {
@@ -490,6 +500,15 @@ class App {
         ).element;
         append(this.main, this.listSongs);
 
+        // добавляем в объект класса список воспоизведения 
+        this.songsPlayer.songs = createListSongAndStatus(songs);
+
+
+
+        getNextSongFromSongsPlayer(this.songsPlayer.songs, 7);
+
+        console.log(this.songsPlayer);
+
         // возвращаем список треков
         return songs
     }
@@ -562,7 +581,8 @@ class App {
      * Функция отрисовки футера (плеера)
      * @param { Song } song - трек
      */
-    renderPlayer(song: Song) {
+    renderPlayer(song?: Song) {
+        if (!song) return;
 
         // удаляем старый футер
         this.playerEl?.remove();
@@ -574,12 +594,13 @@ class App {
                 username: USER.username,
                 status: {
                     start: false,
-                    playMode: 0
+                    shaffle: this.songsPlayer.shaffle,
+                    repeat: this.songsPlayer.repeat
                 },
                 handlers: {
                     like: this.likeSong.bind(this),
                     ended: this.endedSong.bind(this),
-                    staffle: this.staffleSong.bind(this),
+                    shaffle: this.shaffleSong.bind(this),
                     prev: this.prevSong.bind(this),
                     next: this.nextSong.bind(this),
                     repeat: this.repeatSong.bind(this),
@@ -608,14 +629,19 @@ class App {
     * Обработчик события нажатия на кнопку плеера Перемешать
     * @param {number} id - id трека
     */
-    staffleSong(id?: number) {
+    shaffleSong(id?: number) {
 
         // не обрабатываем событие если нет id
         if (!id) return;
 
+        // в URL и объекте класса со списком воспоизведения плеера значение параметра shaffle
+        // меняем на противоположное
+        this.songsPlayer.shaffle ? setURLParams('shaffle', '0') : setURLParams('shaffle', '1');
+        this.songsPlayer.shaffle ? this.songsPlayer.shaffle = false : this.songsPlayer.shaffle = true;
+
+        // меняем цвет кнопки
         this.player?.btnShaffleSongEl?.classList.toggle('active');
 
-        console.log(`staffle - ${id}`);
     }
 
 
@@ -640,7 +666,12 @@ class App {
         // не обрабатываем событие если нет id
         if (!id) return;
 
-        console.log(`next - ${id}`);
+        (async () => {
+
+            this.renderPlayer(getNextSongFromSongsPlayer(this.songsPlayer.songs, id))
+
+            console.log(`next - ${id}`);
+        })()
     }
 
     /**
@@ -652,7 +683,14 @@ class App {
         // не обрабатываем событие если нет id
         if (!id) return;
 
-        console.log(`repeat - ${id}`);
+        // в URL и объекте класса со списком воспоизведения плеера значение параметра repeat
+        // меняем на противоположное
+        this.songsPlayer.repeat ? setURLParams('repeat', '0') : setURLParams('repeat', '1');
+        this.songsPlayer.repeat ? this.songsPlayer.repeat = false : this.songsPlayer.repeat = true;
+
+        // меняем цвет кнопки
+        this.player?.btnRepeatSongEl?.classList.toggle('active');
+
     }
 
 
