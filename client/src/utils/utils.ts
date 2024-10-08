@@ -128,7 +128,7 @@ export function getSessionStorage(key: string): any {
  * Функция перемещивает массив алгоритмом Фишера-Йетса
  * @param {Array<T>} array - массив
  */
-export function shuffle<T>(array: Array<T>): void {
+export function shuffleArray<T>(array: Array<T>): void {
     let currentIndex = array.length;
     while (currentIndex != 0) {
         let randomIndex = Math.floor(Math.random() * currentIndex);
@@ -192,3 +192,17 @@ export function getURLParamByKey<T>(key: string, default_value: T, type: string 
 
     return default_value
 }
+
+/**
+ * Функция, которая «откладывает» вызов другой функции
+ * @param fn - выываемая функция
+ * @param ms - время на которое «откладывается» вызов функции
+ * @returns 
+ */
+export const debounce = (fn: Function, ms = 300) => {
+    let timeoutId: ReturnType<typeof setTimeout>;
+    return function (this: any, ...args: any[]) {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => fn.apply(this, args), ms);
+    };
+};

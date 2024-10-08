@@ -19,12 +19,13 @@ interface PlayerProps {
     status?: {
         start?: boolean,
         repeat?: boolean,
-        shaffle?: boolean
+        shuffle?: boolean
     }
     handlers?: {
+        playPause?: (id?: number, status?: boolean) => void,
         like?: (id: number, e?: CustomEvent) => void,
         ended?: (id?: number) => void,
-        shaffle?: (id?: number) => void,
+        shuffle?: (id?: number) => void,
         next?: (id?: number) => void,
         prev?: (id?: number) => void,
         repeat?: (id?: number) => void,
@@ -156,7 +157,7 @@ export class ElementPlayer extends BaseElement {
                 </div>
                 <div class="player__controls">
                     <div class="player__controls__header">
-                        <button class="player__shaffle-btn ${this.props.status?.shaffle ? "active" : ""}">
+                        <button class="player__shaffle-btn ${this.props.status?.shuffle ? "active" : ""}">
                             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"
                                 xmlns="http://www.w3.org/2000/svg">
                                 <path
@@ -250,8 +251,8 @@ export class ElementPlayer extends BaseElement {
         // обработка события нажатия на кнопку Перемешать
         this.btnShaffleSongEl?.addEventListener('click', (e: CustomEvent) => {
             e.preventDefault();
-            if (this.props.handlers?.shaffle) {
-                this.props.handlers?.shaffle(this.id);
+            if (this.props.handlers?.shuffle) {
+                this.props.handlers?.shuffle(this.id);
             }
         });
 
@@ -358,9 +359,15 @@ export class ElementPlayer extends BaseElement {
         // переключаем на паузу
         if (this.audioStatus.playing) {
             await this.audioEl?.pause();
+            if (this.props.handlers?.playPause) {
+                this.props.handlers?.playPause(this.id, false);
+            }
         // иначе воспроизводим
         } else {
             await this.audioEl?.play();
+            if (this.props.handlers?.playPause) {
+                this.props.handlers?.playPause(this.id, true);
+            }
         }
     }
 

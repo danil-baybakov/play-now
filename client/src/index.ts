@@ -8,7 +8,7 @@ import { ListElementSong } from './components/content/body/main/songs/songs';
 import { ElementPlayer } from './components/content/player/player';
 import { ElementModalAddPlaylist } from './components/modal/modal';
 import { SONGS, PLAYLISTS, USERS } from './mock/data';
-import { append, setSessionStorage, getSessionStorage, shuffle, setURLParams, getURLParamByKey } from './utils/utils';
+import { append, setSessionStorage, getSessionStorage, shuffleArray, setURLParams, getURLParamByKey } from './utils/utils';
 import { CustomEvent } from './components/base/base';
 import { ElementOrNone, IPage } from './types/types';
 import { REG_USER, USER } from './api/config';
@@ -16,7 +16,7 @@ import { fetchRegister, fetchLogin, fetchUserLikes } from './api/user/apiUser';
 import {
     fetchSearchSongs, fetchGetSongsById, fetchLikeSongsById,
     fetchUnlikeSongsById, fetchGetSongsPlaylistById,
-    isLikeSong, Songs, Song, SongsPlayer, createListSongAndStatus, getNextSongFromSongsPlayer
+    isLikeSong, Songs, Song, SongsPlayer
 } from './api/song/apiSong';
 import { Playlists, fetchGetUserPlaylists, fetchPlaylistsById } from './api/playlist/apiPlaylist';
 
@@ -30,7 +30,7 @@ class App {
     body: ElementOrNone = null;  // DOM элемент - body - тело приложения
     modalAddPlaylist: ElementOrNone = null; // DOM элемент - модальное окно добавления трека в плейлист
     content: ElementOrNone = null; // DOM элемент - основной контейнер
-    header: ElementOrNone = null; // DOM элемент - шапка приложения
+    headerEl: ElementOrNone = null; // DOM элемент - шапка приложения
     wrapper: ElementOrNone = null;  // DOM элемент - обертка центальной части контента
     asaid: ElementOrNone = null;  // DOM элемент - меню
     main: ElementOrNone = null;  // DOM элемент - контейнер страниц
@@ -39,12 +39,15 @@ class App {
     playerEl: ElementOrNone = null; // DOM элемент - плеер
 
     player?: ElementPlayer; //  класс для создания плеера
+    header?: ElementHeader; //  класс для создания шапки приложения
 
-    songsPlayer: SongsPlayer = {
-        songs: [],
-        repeat: false,
-        shaffle: false
-    }; // список воспоизведения плеера
+    songs: Songs = []; // список воспоизведения плеера
+    songsCopy: Songs = []; // копия списока воспоизведения плеера
+
+    play: boolean = false; // флаг Проигрывать треки
+    repeat: boolean = false; // флаг Трек на повтор
+    shuffle: boolean = false; // флаг Перемешать треки в случайном порядке
+
 
 
     constructor() {
@@ -109,9 +112,9 @@ class App {
                     search: this.setSearchParams.bind(this),
                 }
             }
-        )
-            .element;
-        append(this.content, this.header);
+        );
+        this.headerEl = this.header.element;
+        append(this.content, this.headerEl);
 
         // создаем и довавляем в основной контейнер обертку центальной части контента
         this.wrapper = document.createElement("div");
@@ -163,21 +166,9 @@ class App {
      * @param {number} id - идентификатор элемента
      * @param {ElementOrNone} e - объект события элемента
     */
-    turnOnSong(id: number, e?: CustomEvent): void {
-        (async () => {
-            // по id получаем с API объект с данными трека
-            let song: Song;
-            try {
-                song = await fetchGetSongsById(getSessionStorage('token'), id);
-            } catch (e) {
-                console.log(e)
-                return
-            }
-
-            this.renderPlayer(song);
-
-            setURLParams("songId", String(id));
-        })();
+    turn(id: number, e?: CustomEvent): void {
+        // отрисовываем плеер по id трека
+        this.renderPlayerById(id, this.play);
     }
 
     /***
@@ -186,7 +177,7 @@ class App {
     * @param {number} id - идентификатор элемента
     * @param {ElementOrNone} e - объект события элемента
     */
-    openDropdown(id: number, e?: CustomEvent): void {
+    dropdown(id: number, e?: CustomEvent): void {
 
         if (!(id && e)) return;
 
@@ -206,7 +197,7 @@ class App {
     * @param {number} id - идентификатор элемента
     * @param {ElementOrNone} e - объект события элемента
     */
-    addSong(id: number, e?: CustomEvent): void {
+    add(id: number, e?: CustomEvent): void {
         // открываем модальное окно добавления трека в плейлист
         this.modalAddPlaylist?.classList.add('show');
     }
@@ -216,7 +207,7 @@ class App {
     * @param {number} id - идентификатор элемента
     * @param {ElementOrNone} e - объект события элемента 
     */
-    deleteSong(id: number, e?: CustomEvent): void {
+    delete(id: number, e?: CustomEvent): void {
         // находим соответствующий элемент трека и удаляем его из DOM
         const songItem = document.querySelector(`[data-num_tracks_item="${id}"]`);
         songItem?.remove();
@@ -227,9 +218,7 @@ class App {
     * @param {number} id - идентификатор элемента
     * @param {ElementOrNone} e - объект события элемента
     */
-    likeSong(id: number, e?: CustomEvent) {
-
-        console.log(id);
+    like(id: number, e?: CustomEvent) {
 
         (async () => {
 
@@ -278,7 +267,8 @@ class App {
             // и трек удален из избранных, перерисовывам страницу
             const urlPathName = window.location.pathname;
             if (urlPathName === "/favorite") {
-                await this.router({ name: urlPathName, search: '' });
+                const result = await this.router({ name: urlPathName, search: '' });
+                setURLParams("songId", '');
             }
 
         })();
@@ -289,13 +279,13 @@ class App {
      * Функция роутинга страниц приложения
      * @param {IPage} page - объект с путем и параметрами страницы
      */
-    async router(page: IPage) {
+    async router(page: IPage): Promise<boolean> {
 
-        // из URL получаем параметр shaffle и repeat
-        // в объекте класса со списоком воспоизведения плеера 
-        // обновляем соответствующие значения shaffle и repeat полученными значениями из URL
-        this.songsPlayer.shaffle = getURLParamByKey('shaffle', '0', 'bool');
-        this.songsPlayer.repeat = getURLParamByKey('repeat', '0', 'bool');
+        // из URL получаем параметры play, shuffle, repeat
+        // обновляем соответствующие параметры класса play, shuffle, repeat полученными значениями из URL
+        this.play = getURLParamByKey('play', '0', 'bool');
+        this.shuffle = getURLParamByKey('shuffle', '0', 'bool');
+        this.repeat = getURLParamByKey('repeat', '0', 'bool');
 
         // из URL получаем параметр со значением поискового запроса если есть такой
         let searchName = getURLParamByKey('search', '');
@@ -315,6 +305,12 @@ class App {
             }
         }
 
+        // если при обновлении страницы - параметр поиска в URL не пустой
+        // и поле ввода поиска пустое заполняем его значением параметра поиска из URL
+        if (searchName !== '' && this.header?.searchFieldEl?.value === '') {
+            this.header.searchFieldEl.value = searchName;
+        }
+
         // из URL получаем параметр с Id текущего проигрываемого трека если есть такой
         const songId = getURLParamByKey('songId', null);
 
@@ -322,7 +318,6 @@ class App {
         document.querySelectorAll('.aside__btn').forEach(elem => {
             elem.classList.remove('aside__btn-active');
         })
-
 
 
         // переход на страницу Треки
@@ -348,8 +343,20 @@ class App {
             // формируем заголовок страницы
             const title = !selectPlaylist ? ((page.name === '/') ? "Треки" : "Избранное") : `${titlePleylist}`;
 
+            // c API получаем список треков
+            const songs: Songs = await this.getSongs(selectPageSongsLike, Number(playlistId));
+
+             // фильтруем список полученных треков и сохраняем в список воспроизведения плеера
+            this.songs = songs.filter(({ name }) =>
+                name.toLowerCase().includes(searchName.toLowerCase())
+            );
+            this.songsCopy = [...songs];
+         
             // отрисовывам страницу с треками
-            const songs = await this.renderPageSongs(searchName, title, titlePleylist, selectPageSongsLike);
+            await this.renderPageSongs(this.songs, title);
+            
+            
+            if (this.shuffle) shuffleArray(this.songs);
 
             if (!selectPlaylist && !selectPageSongsLike) {
                 // кнопку навигации Треки делаем активной
@@ -362,18 +369,20 @@ class App {
                 document.querySelector(`[data-path="playlist-${playlistId}"]`)?.classList.add('aside__btn-active');
             }
 
-
             // если в URL нет параметра с ID текущего выбранного трека
             if (!songId) {
+
                 // в плеер выводим случайно выбранный трек
-                const song = this.renderPlayerRandom(songs, null, true);
-                if (song) {
-                    // и Id его добавляем в параметр URL
-                    setURLParams("songId", String(song.id));
+                const ranSong = this.getSongRandom(this.songs);
+                if (ranSong) {
+                    this.renderPlayer(ranSong, this.play);
+                    setURLParams("songId", String(ranSong.id));
                 }
-                // иначе в плеер выводим трек с ID из URL параметра
+     
+            // иначе в плеер выводим трек с ID из URL параметра
             } else {
-                this.turnOnSong(Number(songId));
+                console.log(songId);
+                this.renderPlayerById(Number(songId), this.play);
             }
 
 
@@ -402,6 +411,8 @@ class App {
             document.querySelector('[data-path="playlists"]')?.classList.add('aside__btn-active');
 
         }
+
+        return true;
 
     }
 
@@ -444,39 +455,52 @@ class App {
         })();
     }
 
+
+    /**
+     * Функция в зависимости от заданных входных параметров получает из API
+     * полный список треков, список треков отдельного плейлиста, список избранных треков
+     * @param {boolean} isLikes - флаг: 1 - получить список избранных треков, 0 - получить полный список треков
+     * @param {number | null} playlistId - если задан, функция выдает список треков отдельного плейлиста
+     * @returns 
+     */
+    async getSongs( isLikes: boolean = false, playlistId?: number): Promise<Songs> {
+        let songs: Songs = [];
+        // если задан id отдельного плейлиста
+        // получаем список треков отдельного плейлиста
+        if (playlistId) {
+            try {
+                songs = await fetchGetSongsPlaylistById(getSessionStorage('token'), playlistId);
+            } catch (e) { 
+                console.log(e); 
+            }
+        }
+        // иначе если isLikes = true
+        // получаем список избранных треков
+        else if (isLikes) {
+            try {
+                const response = await fetchUserLikes(getSessionStorage('token'));
+                songs = response.songLikes;
+            } catch (e) { 
+                console.log(e); 
+            }
+        }
+        // иначе получаем полный список треков
+        else {
+            try {
+                songs = await fetchSearchSongs(getSessionStorage('token'));
+            } catch (e) { 
+                console.log(e); 
+            }
+        }
+        return songs;
+    }
+
     /**
      * Функция отрисовки страницы со списком треков
      * @param {Songs} songs - список треков (объекты с данными о треке)
      * @param {string} title - заголовок страницы
      */
-    async renderPageSongs(search: string, title: string, playlistId: string | null = null, likes: boolean = false): Promise<Songs> {
-
-        // c API получаем список треков
-        let songs: Songs = [];
-        if (!playlistId) {
-            // полный
-            if (!likes) {
-                try {
-                    songs = await fetchSearchSongs(getSessionStorage('token'));
-                } catch (e) { console.log(e); }
-                // избрвнный
-            } else {
-                try {
-                    const response = await fetchUserLikes(getSessionStorage('token'));
-                    songs = response.songLikes;
-                } catch (e) { console.log(e); }
-            }
-        } else {
-            // по отдельному плейлисту
-            try {
-                songs = await fetchGetSongsPlaylistById(getSessionStorage('token'), Number(playlistId));
-            } catch (e) { console.log(e); }
-        }
-
-        // фильтруем треки
-        const filterSongs = songs.filter(({ name }) =>
-            name.toLowerCase().includes(search.toLowerCase())
-        );
+    async renderPageSongs(songs: Songs, title: string): Promise<Songs> {
 
         // вызываем функцию очистки контейнера страниц
         this.clearPageContainer()
@@ -484,30 +508,21 @@ class App {
         // создаем и довавляем контейнер страниц элемент страницы треков
         this.listSongs = new ListElementSong(
             {
-                songs: filterSongs,
+                songs: songs,
                 username: USER.username,
                 title: title,
                 handlers: {
-                    turnOnSong: this.turnOnSong.bind(this),
-                    openDropdown: this.openDropdown.bind(this),
-                    addSong: this.addSong.bind(this),
-                    deleteSong: this.deleteSong.bind(this),
-                    likeSong: this.likeSong.bind(this)
+                    turn: this.turn.bind(this),
+                    dropdown: this.dropdown.bind(this),
+                    add: this.add.bind(this),
+                    delete: this.delete.bind(this),
+                    like: this.like.bind(this)
 
                 }
             }
 
         ).element;
         append(this.main, this.listSongs);
-
-        // добавляем в объект класса список воспоизведения 
-        this.songsPlayer.songs = createListSongAndStatus(songs);
-
-
-
-        getNextSongFromSongsPlayer(this.songsPlayer.songs, 7);
-
-        console.log(this.songsPlayer);
 
         // возвращаем список треков
         return songs
@@ -538,52 +553,13 @@ class App {
     }
 
     /**
-     * Функция отрисовки футера (плеера) случайным выбором из списка треков
-     * @param { Songs } songs - список треков
-     * @param { number | null } songId - Id трека (по умолчанию id трека не заданно)
-     * @param { boolean } mix - флаг способа выбора трека, если Id не заданно (по умолчанию 0)
-     * 0 - по порядку первый в списке треков
-     * 1 - в случайном порядке
-     */
-    renderPlayerRandom(songs: Songs, songId: number | null = null, mix: boolean = false): Song | undefined {
-
-        // если список треков не пустой
-        if (songs.length > 0) {
-
-            let song: Song | null;
-
-            // если id не заданно
-            if (songId == null) {
-                // если установлен флаг mix
-                // перемешиваем список треков
-                if (mix) {
-                    shuffle(songs);
-                }
-                // выбираем первый из списка треков
-                song = songs[0];
-                // иначе выбираем конкретный трек по id
-            } else {
-                song = songs[songId];
-            }
-
-
-            // создаем и добавляем в DOM футер (плеер)
-            this.renderPlayer(song);
-
-            // возвращаем выбранный трек
-            return song;
-
-        }
-
-    }
-
-    /**
      * Функция отрисовки футера (плеера)
      * @param { Song } song - трек
      */
-    renderPlayer(song?: Song) {
-        if (!song) return;
+    renderPlayer(song?: Song, play: boolean = false): void {
 
+        if (!song) return;
+ 
         // удаляем старый футер
         this.playerEl?.remove();
 
@@ -593,14 +569,15 @@ class App {
                 song: song,
                 username: USER.username,
                 status: {
-                    start: false,
-                    shaffle: this.songsPlayer.shaffle,
-                    repeat: this.songsPlayer.repeat
+                    start: play,
+                    shuffle: this.shuffle,
+                    repeat: this.repeat
                 },
                 handlers: {
-                    like: this.likeSong.bind(this),
-                    ended: this.endedSong.bind(this),
-                    shaffle: this.shaffleSong.bind(this),
+                    playPause: this.playPause.bind(this),
+                    like: this.like.bind(this),
+                    ended: this.nextSong.bind(this),
+                    shuffle: this.shuffleSong.bind(this),
                     prev: this.prevSong.bind(this),
                     next: this.nextSong.bind(this),
                     repeat: this.repeatSong.bind(this),
@@ -613,6 +590,40 @@ class App {
     }
 
     /**
+     * Функция отрисовки плеера по id плеера
+     * @param {number} id - id трека
+     */
+    renderPlayerById(id: number, play: boolean = false): void {
+        // получаем индекс трека в массиве треков
+        const song= this.getSongById(this.songs, id);
+
+        console.log(song);
+
+        // отрисовываем плеер с соответствующим треком
+        if (song) {
+            this.renderPlayer(song, this.play);
+            setURLParams("songId", String(id));
+        }
+    }
+
+    /**
+     * Обработчик события нажатия на кнопку плеера Воспроизвести/Пауза
+     * @param {number} id - id трека
+     * @param {boolean} status - статус: 1 - воспроизведение, 0 - пауза
+     */
+    playPause(id?: number, status: boolean = false) {
+
+        // не обрабатываем событие если нет id
+        if (!id) return;
+
+        
+        // в URL и классе значение параметра play 
+        // меняем на противоположное
+        this.play ? this.play = false : this.play = true;
+        this.play ? setURLParams('play', '1') : setURLParams('play', '0');
+    }
+
+    /**
      * Обработчик события окончания воспроизведения текущего трека
      * @param {number} id - id трека
      */
@@ -620,8 +631,6 @@ class App {
 
         // не обрабатываем событие если нет id
         if (!id) return;
-
-        console.log(`ended - ${id}`);
     }
 
 
@@ -629,18 +638,27 @@ class App {
     * Обработчик события нажатия на кнопку плеера Перемешать
     * @param {number} id - id трека
     */
-    shaffleSong(id?: number) {
+    shuffleSong(id?: number) {
 
         // не обрабатываем событие если нет id
         if (!id) return;
 
-        // в URL и объекте класса со списком воспоизведения плеера значение параметра shaffle
+        // в URL и классе значение параметра shaffle 
         // меняем на противоположное
-        this.songsPlayer.shaffle ? setURLParams('shaffle', '0') : setURLParams('shaffle', '1');
-        this.songsPlayer.shaffle ? this.songsPlayer.shaffle = false : this.songsPlayer.shaffle = true;
+        this.shuffle ? this.shuffle = false : this.shuffle = true;
+        this.shuffle ? setURLParams('shuffle', '1') : setURLParams('shuffle', '0');
 
         // меняем цвет кнопки
         this.player?.btnShaffleSongEl?.classList.toggle('active');
+
+        // если не режим повтора
+        if (!this.repeat) {
+            if (this.shuffle) {
+                shuffleArray(this.songs);
+            } else {
+                this.songs = [...this.songsCopy];
+            }
+        }
 
     }
 
@@ -654,7 +672,18 @@ class App {
         // не обрабатываем событие если нет id
         if (!id) return;
 
-        console.log(`prev - ${id}`);
+        // если не режим повтора
+        // включаем предыдущий трек
+        if (!this.repeat) {
+            const prevSong = this.getSongNextById(this.songs, id, false);
+            if (prevSong) {
+                this.renderPlayer(prevSong, this.play);
+                setURLParams("songId", String(prevSong.id));
+            }
+        } else {
+            this.renderPlayerById(id, this.play);
+        }
+            
     }
 
     /**
@@ -666,12 +695,18 @@ class App {
         // не обрабатываем событие если нет id
         if (!id) return;
 
-        (async () => {
-
-            this.renderPlayer(getNextSongFromSongsPlayer(this.songsPlayer.songs, id))
-
-            console.log(`next - ${id}`);
-        })()
+        // если не режим повтора
+        // включаем следующий трек
+        if (!this.repeat) {
+            const nextSong = this.getSongNextById(this.songs, id);
+            if (nextSong) {
+                this.renderPlayer(nextSong, this.play);
+                setURLParams("songId", String(nextSong.id));
+            }
+        } else {
+            this.renderPlayerById(id, this.play);
+        }
+        
     }
 
     /**
@@ -683,10 +718,10 @@ class App {
         // не обрабатываем событие если нет id
         if (!id) return;
 
-        // в URL и объекте класса со списком воспоизведения плеера значение параметра repeat
+        // в URL и классе значение параметра repeat 
         // меняем на противоположное
-        this.songsPlayer.repeat ? setURLParams('repeat', '0') : setURLParams('repeat', '1');
-        this.songsPlayer.repeat ? this.songsPlayer.repeat = false : this.songsPlayer.repeat = true;
+        this.repeat ? setURLParams('repeat', '0') : setURLParams('repeat', '1');
+        this.repeat ? this.repeat = false : this.repeat = true;
 
         // меняем цвет кнопки
         this.player?.btnRepeatSongEl?.classList.toggle('active');
@@ -694,6 +729,100 @@ class App {
     }
 
 
+    /**
+     * Функция определяет индекс трека в массиве треков по id
+     * @param {Songs} songs - список треков
+     * @param {number} id - id трека
+     * @returns 
+     */
+    getSongIndexById(songs: Songs, id: number): number | undefined {
+        // возвращаем undefined если массив треков пустой
+        if (songs.length === 0) return;
+
+        
+        // ищем трек с нужным id
+        // и если его нашли вовращаем индекс трека в массиве
+        for (const index in songs) {
+            if (songs[index].id === id ) return Number(index);
+        }
+    }
+
+    /**
+     * Функция возвращает случайный трек из массива треков
+     * @param {Songs} songs - список треков
+     * @returns 
+     */
+    getSongRandom(songs: Songs): Song | undefined {
+         // возвращаем undefined если массив треков пустой
+         if (songs.length === 0) return;
+
+         // возвращаем случайный трек
+         const rand = Math.floor(Math.random() * songs.length);
+         return songs[rand];
+    }
+
+    /**
+     * Функция из массива треков по Id возвращает трек
+     * @param {Songs} songs - список треков
+     * @param {number} id - id трека
+     * @returns 
+     */
+    getSongById(songs: Songs, id: number): Song | undefined {
+        // возвращаем undefined если массив треков пустой
+        if (songs.length === 0) return;
+
+         // определяем индекс трека в массиве треков по id
+         const index = this.getSongIndexById(songs, id);
+
+          // если есть такой трек
+        if (index !== undefined) {
+            return songs[index];
+        }
+
+    }
+
+
+    /**
+     * Функция возвращает следующий или предыдущий трек в массиве треков
+     * @param {Songs} songs - список треков
+     * @param {number} id - id трека
+     * @param {boolean} next - флаг: 1 (по умолчанию) - возвращаем следующий трек, 0 - предыдущий
+     * @returns 
+     */
+    getSongNextById(songs: Songs, id: number, next: boolean = true): Song | undefined {
+        // возвращаем undefined если массив треков пустой
+        if (songs.length === 0) return;
+
+        // определяем индекс трека в массиве треков по id
+        const index = this.getSongIndexById(songs, id);
+        
+        // если есть такой трек
+        if (index !== undefined) {
+            // если хотом получить следующий трек
+            if (next) {
+                // если индекс последнего трека в массиве треков
+                // возвращаем первый трек из массива треков
+                if (index === (songs.length - 1)) {
+                    return songs[0]
+                // иначе 
+                // возвращаем следующий трек из массива треков
+                } else {
+                    return songs[index + 1]
+                }
+            // если хотом получить предыдущий трек   
+            } else {
+                // если индекс первого трека в массиве треков
+                // возвращаем последний трек из массива треков
+                if (index === 0) {
+                    return songs[songs.length - 1]
+                // иначе 
+                // возвращаем предыдущий трек из массива треков
+                } else {
+                    return songs[index - 1]
+                }
+            }
+        }      
+    }
 
 
 }

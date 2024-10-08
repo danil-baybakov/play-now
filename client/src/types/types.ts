@@ -1,3 +1,5 @@
+import { number } from "zod";
+
 export type ElementOrNone = Element | null;
 
 export type NavigatePath = {

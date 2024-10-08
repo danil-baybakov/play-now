@@ -1,5 +1,6 @@
 import { BaseElement } from "../../base/base";
 import { User } from "../../../api/user/apiUser";
+import { debounce } from "../../../utils/utils";
 
 interface HeaderProps {
     user: User,
@@ -11,12 +12,26 @@ interface HeaderProps {
 
 export class ElementHeader extends BaseElement {
 
+    searchFieldEl?: HTMLInputElement | null;
+
+
     constructor(
       private props: HeaderProps,
     ) {
       super();
-      this.getElement();
-      this.setEventListenner();
+      this.init();
+    }
+
+    init() {
+         // формируем DOM-элемент класса
+        this.getElement();
+
+        // в свойства класса добавляем элементы
+        // поле поиска трека
+        this.searchFieldEl = this.element?.querySelector('.header__search__field');
+
+         // вешаем обработчики событий на все элементы
+        this.setEventListenner();
     }
   
     getTemplate(): void {
@@ -54,20 +69,27 @@ export class ElementHeader extends BaseElement {
      */
     setEventListenner() {
 
-        // получаем элемент с полем поиска
-        const searchField = this.element?.querySelector('.header__search__field');
         // устанавливаем обработчик события ввода текста в
         // поле поиска
-        if (searchField instanceof HTMLElement) { 
-            searchField.addEventListener('input', (e) => {
-                const target = e.target as HTMLInputElement;
-                const searchParams = {
-                    key: "search",
-                    value: target.value
-                }
-                if (this.props.handlers?.search) this.props.handlers?.search(searchParams.key, searchParams.value, e as CustomEvent)
-            })
-        }
+         this.searchFieldEl?.addEventListener('input', debounce(this.search, 500));
       }
+
+
+    /**
+     * Функция поиска трека
+     * @param e 
+     */
+    search = (e: Event) => {
+        const target = e.target as HTMLInputElement;
+        const searchParams = {
+            key: "search",
+            value: target.value
+        }
+        if (this.props.handlers?.search) this.props.handlers?.search(searchParams.key, searchParams.value, e as CustomEvent)
+    }
+
+
+
+
   
   }

@@ -10,11 +10,11 @@ interface SongsProps {
   username?: string,
   title?: string,
   handlers?: {
-    turnOnSong?: (id: number, e?: CustomEvent) => void
-    openDropdown?: (id: number, e?: CustomEvent) => void,
-    addSong?: (id: number, e?: CustomEvent) => void,
-    deleteSong?: (id: number, e?: CustomEvent) => void,
-    likeSong?: (id: number, e?: CustomEvent) => void,
+    turn?: (id: number, e?: CustomEvent) => void
+    dropdown?: (id: number, e?: CustomEvent) => void,
+    add?: (id: number, e?: CustomEvent) => void,
+    delete?: (id: number, e?: CustomEvent) => void,
+    like?: (id: number, e?: CustomEvent) => void,
   }
 }
 
@@ -98,19 +98,19 @@ export class ListElementSong extends BaseElement {
     }
 
     const listSong = this.element?.querySelectorAll('.track__name__link');
-    listSong?.forEach(elem => handler(elem, 'num_track_link', this.props.handlers?.turnOnSong));
+    listSong?.forEach(elem => handler(elem, 'num_track_link', this.props.handlers?.turn));
 
     const listBtnOpenDropdown = this.element?.querySelectorAll('.track__btn-dropdown');
-    listBtnOpenDropdown?.forEach(elem => handler(elem, 'num_track_btn_dropdown', this.props.handlers?.openDropdown));
+    listBtnOpenDropdown?.forEach(elem => handler(elem, 'num_track_btn_dropdown', this.props.handlers?.dropdown));
 
     const listBtnAdd = this.element?.querySelectorAll('.track__add-btn');
-    listBtnAdd?.forEach(elem => handler(elem, 'num_track_add_btn', this.props.handlers?.addSong));
+    listBtnAdd?.forEach(elem => handler(elem, 'num_track_add_btn', this.props.handlers?.add));
 
     const listBtnDelete = this.element?.querySelectorAll('.track__delete-btn');
-    listBtnDelete?.forEach(elem => handler(elem, 'num_track_delete_btn', this.props.handlers?.deleteSong));
+    listBtnDelete?.forEach(elem => handler(elem, 'num_track_delete_btn', this.props.handlers?.delete));
 
     const listBtnLike = this.element?.querySelectorAll('.track__like-btn');
-    listBtnLike?.forEach(elem => handler(elem, 'num_track_like_btn', this.props.handlers?.likeSong));
+    listBtnLike?.forEach(elem => handler(elem, 'num_track_like_btn', this.props.handlers?.like));
   }
 
 }
