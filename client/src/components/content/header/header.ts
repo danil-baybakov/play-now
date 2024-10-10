@@ -2,7 +2,7 @@ import { BaseElement } from "../../base/base";
 import { User } from "../../../api/user/apiUser";
 import { debounce } from "../../../utils/utils";
 
-interface HeaderProps {
+interface HeaderElProps {
     user: User,
     url_avatar?: string,
     handlers?: {
@@ -10,13 +10,13 @@ interface HeaderProps {
     }
 }
 
-export class ElementHeader extends BaseElement {
+export class HeaderEl extends BaseElement {
 
     searchFieldEl?: HTMLInputElement | null;
 
 
     constructor(
-      private props: HeaderProps,
+      private props: HeaderElProps,
     ) {
       super();
       this.init();

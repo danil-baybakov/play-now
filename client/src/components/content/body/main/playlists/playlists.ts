@@ -5,14 +5,14 @@ import urlImgPlaylist from "../../../../../assets/image/playlists/playlists.jpg"
 import urlImgPlaylist360 from "../../../../../assets/image/playlists/playlists__360.jpg";
 import urlImgPlaylist1440 from "../../../../../assets/image/playlists/playlists__1440.jpg";
 
-interface PlaylistsProps {
+interface PlaylistsElProps {
   playlists: Playlists
 }
 
-export class ListElementPlaylist extends BaseElement {
+export class PlaylistsEl extends BaseElement {
 
     constructor(
-      private props: PlaylistsProps,
+      private props: PlaylistsElProps,
     ) {
       super();
       this.getElement();
@@ -21,7 +21,7 @@ export class ListElementPlaylist extends BaseElement {
     getTemplate(): void {
       let htmlPlaylistList: string = '';
       for (const key in this.props.playlists) {
-        const elementPlaylist = new ElementPlaylist(
+        const elementPlaylist = new PlaylistEl(
           {
             playlist: this.props.playlists[key],
           }  
@@ -40,14 +40,14 @@ export class ListElementPlaylist extends BaseElement {
   
   }
 
-interface PlaylistProps {
+interface PlaylistElProps {
   playlist: Playlist,
 }
 
-export class ElementPlaylist extends BaseElement {
+export class PlaylistEl extends BaseElement {
 
   constructor(
-    private props: PlaylistProps,
+    private props: PlaylistElProps,
   ) {
     super();
     this.getElement();

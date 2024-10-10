@@ -13,9 +13,10 @@ type AudioStatus = {
     volume: number;
 }
 
-interface PlayerProps {
+interface PlayerElProps {
     song: Song,
     username?: string,
+    audioContext?: AudioContext
     status?: {
         start?: boolean,
         repeat?: boolean,
@@ -34,7 +35,7 @@ interface PlayerProps {
 
 
 
-export class ElementPlayer extends BaseElement {
+export class PlayerEl extends BaseElement {
 
     id?: number;  // идентификатор трека
 
@@ -65,7 +66,7 @@ export class ElementPlayer extends BaseElement {
 
 
     constructor(
-        private props: PlayerProps,
+        private props: PlayerElProps,
     ) {
       super();
       this.itit();
@@ -113,7 +114,7 @@ export class ElementPlayer extends BaseElement {
 
     initializeAudio() {
         // создаем экземпляр аудиоконтекста
-        this.audioCtx = new AudioContext();
+        this.audioCtx = this.props.audioContext || new AudioContext();
 
         // создаем и подключаем аудио источник
         if (this.audioEl) {

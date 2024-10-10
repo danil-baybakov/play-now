@@ -1099,5 +1099,53 @@ export const SONGS = [
         "lastName": "string"
       },
       "songs": []
+    },
+    {
+      "id": 5,
+      "name": "Плайлист 5",
+      "createdAt": "2024-09-04 11:20:17",
+      "user": {
+        "id": 1,
+        "username": "string",
+        "firstName": "string",
+        "lastName": "string"
+      },
+      "songs": []
+    },
+    {
+      "id": 6,
+      "name": "Плайлист 6",
+      "createdAt": "2024-09-04 11:20:17",
+      "user": {
+        "id": 1,
+        "username": "string",
+        "firstName": "string",
+        "lastName": "string"
+      },
+      "songs": []
+    },
+    {
+      "id": 7,
+      "name": "Плайлист 7",
+      "createdAt": "2024-09-04 11:20:17",
+      "user": {
+        "id": 1,
+        "username": "string",
+        "firstName": "string",
+        "lastName": "string"
+      },
+      "songs": []
+    },
+    {
+      "id": 8,
+      "name": "Плайлист 8",
+      "createdAt": "2024-09-04 11:20:17",
+      "user": {
+        "id": 1,
+        "username": "string",
+        "firstName": "string",
+        "lastName": "string"
+      },
+      "songs": []
     }
   ]

@@ -4,45 +4,64 @@ import { howManyDays, convertMsToTime, createElement } from '../../../../../util
 import { number } from 'zod';
 import { CustomEvent } from '../../../../base/base';
 import { isLikeSong } from '../../../../../api/song/apiSong';
+import { ElementOrNone, HTMLElementOrNone } from '../../../../../types/types';
+import { append } from '../../../../../utils/utils';
 
-interface SongsProps {
-  songs: Songs,
-  username?: string,
-  title?: string,
-  handlers?: {
-    turn?: (id: number, e?: CustomEvent) => void
-    dropdown?: (id: number, e?: CustomEvent) => void,
-    add?: (id: number, e?: CustomEvent) => void,
-    delete?: (id: number, e?: CustomEvent) => void,
-    like?: (id: number, e?: CustomEvent) => void,
-  }
+interface SongsElProps {
+    songs: Songs,
+    username?: string,
+    title?: string,
+    dropdown?: {
+        add?: boolean,
+        delete?: boolean
+    }
+    handlers?: {
+        turn?: (id: number, e?: CustomEvent) => void
+        dropdown?: (id: number, e: CustomEvent) => void,
+        add?: (id: number, e?: CustomEvent) => void,
+        delete?: (id: number, e?: CustomEvent) => void,
+        like?: (id: number, e?: CustomEvent) => void,
+    }
 }
 
 
-export class ListElementSong extends BaseElement {
+export class SongsEl extends BaseElement {
 
-  constructor(
-    private props: SongsProps,
-  ) {
-    super();
-    this.getElement();
-    this.setEventListenner();
-  }
+    songObjs: SongEl[] = []; // список объктов класса трека
 
+    // DOM элементы
+    songsEl: HTMLElementOrNone = null; // список треков
 
-  getTemplate(): void {
-    let htmlSongList: string = '';
-    for (const key in this.props.songs) {
-      const elementSong = new ElementSong(
-        {
-            song: this.props.songs[key],
-            number: Number(key) + 1,
-            username: this.props.username
-        }
-    );
-      htmlSongList += elementSong.template;
+    constructor(
+        private props: SongsElProps,
+    ) {
+        super();
+        this.init();
     }
-    this.template = `
+
+
+    /**
+     * Метод инициалиации класса
+     */
+    init() {
+        // формируем DOM-элемент класса
+        this.getElement();
+
+        // в свойства класса добавляем элементы
+        // список треков
+        this.songsEl = this.element?.querySelector('.tracks__list');
+
+        // создаем список треков
+        this.createSongList();
+
+        // вешаем обработчики событий на все элементы
+        this.setEventListenner();
+    }
+
+
+    getTemplate(): void {
+
+        this.template = `
         <section class="tracks section tabs-content section--active" data-target="tracks">
           <h2 class="tracks__h2 title__h2">${this.props.title || "Нет заголовка"}</h2>
           <div class="tracks__content">
@@ -71,68 +90,135 @@ export class ListElementSong extends BaseElement {
               </div>
             </div>
             <ul class="tracks__list">
-                ${htmlSongList}
             </ul>
           </div>
         </section>
-    `; 
-  }
+    `;
+    }
 
-  setEventListenner() {
+    /**
+     * Метод создания списка треков
+     */
+    private createSongList() {
+        // если список треков не пустой
+        if (this.props.songs.length > 0) {
 
-    function handler(
-      elem: Element,
-      nameDatasetNum: string, 
-      funcHandler?: (id: number, e?: CustomEvent) => void
-    ):void {
-        if (funcHandler) {
-            let id: number;
-            if (elem instanceof HTMLElement) {
-              id = Number(elem.dataset[nameDatasetNum]);
-              if (id) elem.addEventListener('click', (e) => {
-                e.preventDefault();
-                funcHandler(id, e);
-              })
-          }
+            // создаем объекты класса трека
+            // добавляем в DOM
+            for (const key in this.props.songs) {
+
+                const songObj = new SongEl({
+                    song: this.props.songs[key],
+                    number: Number(key) + 1,
+                    username: this.props.username,
+                    dropdown: {
+                        add: this.props.dropdown?.add,
+                        delete: this.props.dropdown?.delete
+                    },
+                    handlers: {
+                        turn: this.props.handlers?.turn,
+                        dropdown: this.props.handlers?.dropdown,
+                        add: this.props.handlers?.add,
+                        delete: this.props.handlers?.delete,
+                        like: this.props.handlers?.like
+                    }
+                });
+
+                this.songObjs.push(songObj);
+
+                if (this.songsEl) append(this.songsEl, songObj.element);
+            }
+        }
+
+    }
+
+    /**
+     * Метод вешает обработчики событий на все элементы
+     */
+    private setEventListenner() { }
+
+    /**
+     * Метод получения объекта класса трека по Id
+     * @param {number} id - id трека
+     * @returns 
+     */
+    getSongElById(id: number): SongEl | undefined {
+        if (this.songObjs) {
+            return this.songObjs.find(songObj => songObj.id === id);
         }
     }
 
-    const listSong = this.element?.querySelectorAll('.track__name__link');
-    listSong?.forEach(elem => handler(elem, 'num_track_link', this.props.handlers?.turn));
-
-    const listBtnOpenDropdown = this.element?.querySelectorAll('.track__btn-dropdown');
-    listBtnOpenDropdown?.forEach(elem => handler(elem, 'num_track_btn_dropdown', this.props.handlers?.dropdown));
-
-    const listBtnAdd = this.element?.querySelectorAll('.track__add-btn');
-    listBtnAdd?.forEach(elem => handler(elem, 'num_track_add_btn', this.props.handlers?.add));
-
-    const listBtnDelete = this.element?.querySelectorAll('.track__delete-btn');
-    listBtnDelete?.forEach(elem => handler(elem, 'num_track_delete_btn', this.props.handlers?.delete));
-
-    const listBtnLike = this.element?.querySelectorAll('.track__like-btn');
-    listBtnLike?.forEach(elem => handler(elem, 'num_track_like_btn', this.props.handlers?.like));
-  }
-
 }
 
-interface SongProps {
-  song: Song, 
-  number?: number,
-  username?: string,
+interface SongElProps {
+    song: Song,
+    number?: number,
+    username?: string,
+    dropdown?: {
+        add?: boolean,
+        delete?: boolean
+    }
+    handlers?: {
+        turn?: (id: number, e?: CustomEvent) => void
+        dropdown?: (id: number, e: CustomEvent) => void,
+        add?: (id: number, e?: CustomEvent) => void,
+        delete?: (id: number, e?: CustomEvent) => void,
+        like?: (id: number, e?: CustomEvent) => void,
+    }
 }
 
-export class ElementSong extends BaseElement {
+export class SongEl extends BaseElement {
 
-  constructor(
-    private props: SongProps
-  ) {
-    super();
-    this.getElement();
-  }
+    id?: number;  // идентификатор трека
 
-  getTemplate(): void {
+    // DOM элементы
+    turnEl: HTMLElementOrNone = null; // ссылка на воспроизведение трека
+    btnDropdownEl: HTMLElementOrNone = null; // кнопка открытия всплывающего окна добавления/удаления трека
+    dropdownEl: HTMLElementOrNone = null; //  всплывающее окно добавления/удаления трека
+    btnAddEl: HTMLElementOrNone = null; // кнопка Добавить в плейлист
+    btnDeteteEl: HTMLElementOrNone = null; // кнопка Удалить из плейлиста
+    btnLikeEl: HTMLElementOrNone = null; // кнопка Добавить в избранное
 
-    this.template = `
+    constructor(
+        private props: SongElProps
+    ) {
+        super();
+        this.init();
+    }
+
+    /**
+     * Метод инициалиации класса
+     */
+    init() {
+
+        // добавляем в класс идентификатор трека как свойство
+        this.id = Number(this.props.song.id);
+
+        // формируем DOM-элемент класса
+        this.getElement();
+
+        // в свойства класса добавляем элементы
+        // ссылка на воспроизведение трека
+        this.turnEl = this.element?.querySelector('.track__name__link');
+        // кнопка открытия всплывающего окна добавления/удаления трека
+        this.btnDropdownEl = this.element?.querySelector('.track__btn-dropdown');
+        // всплывающее окно добавления/удаления трека
+        this.dropdownEl = this.element?.querySelector('.track__dropdown');
+        // кнопка Добавить в плейлист
+        this.btnAddEl = this.element?.querySelector('.track__add-btn');
+        // кнопка Удалить из плейлиста
+        this.btnDeteteEl = this.element?.querySelector('.track__delete-btn');
+        // кнопка Добавить в избранное
+        this.btnLikeEl = this.element?.querySelector('.track__like-btn');
+
+        // вешаем обработчики событий на все элементы
+        this.setEventListenner();
+
+    }
+
+    getTemplate(): void {
+
+        this.template = `
         <li class="tracks__item flex" data-num_tracks_item=${this.props.song.id}>
 
             <div class="tracks__item__number">${this.props.number || '-'}</div>
@@ -171,14 +257,53 @@ export class ElementSong extends BaseElement {
                         <circle cx="21" cy="2" r="2" fill="#C4C4C4" />
                     </svg>
                 </button>
-                <div class="track__dropdown" data-num_track_dropdown=${this.props.song.id}>
+                <div class="track__dropdown ${this.props.dropdown?.add ? 'dropdown--add' : ''} ${this.props.dropdown?.delete ? 'dropdown--delete' : ''}" data-num_track_dropdown=${this.props.song.id}>
                     <button class="track__add-btn" data-num_track_add_btn=${this.props.song.id}>Добавить в плейлист</button>
                     <button class="track__delete-btn" data-num_track_delete_btn=${this.props.song.id}>Удалить из плейлиста</button>
                 </div>
             </div>
         </li>
-    `; 
-  }
+    `;
+    }
+
+    /**
+     * Метод вешает обработчики событий на все элементы
+     */
+    setEventListenner() {
+
+        // обработка события нажатия на ссылку воспроизведения трека
+        this.turnEl?.addEventListener('click', (e: CustomEvent) => {
+            e.preventDefault();
+            if (this.props.handlers?.turn && this.id) this.props.handlers.turn(this.id, e);
+        });
+
+        // обработка события нажатия на кнопку открытия всплывающего окна добавления/удаления трека
+        this.btnDropdownEl?.addEventListener('click', (e: CustomEvent) => {
+            e.preventDefault();
+            if (this.props.handlers?.dropdown && this.id) this.props.handlers.dropdown(this.id, e);
+        });
+
+        // обработка события нажатия на кнопку Добавить в плейлист
+        this.btnAddEl?.addEventListener('click', (e: CustomEvent) => {
+            e.preventDefault();
+            if (this.props.handlers?.add && this.id) this.props.handlers.add(this.id, e);
+        });
+
+        // обработка события нажатия на кнопку Удалить из плейлиста
+        this.btnDeteteEl?.addEventListener('click', (e: CustomEvent) => {
+            e.preventDefault();
+            if (this.props.handlers?.delete && this.id) this.props.handlers.delete(this.id, e);
+        });
+
+        // обработка события нажатия на кнопку Добавить в избранное
+        this.btnLikeEl?.addEventListener('click', (e: CustomEvent) => {
+            e.preventDefault();
+            if (this.props.handlers?.like && this.id) this.props.handlers.like(this.id, e);
+        });
+
+
+    }
+
 
 
 }

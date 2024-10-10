@@ -971,6 +971,22 @@ body {
   transition: background-color var(--transition-duration) ease-in-out,color var(--transition-duration) ease-in-out;
 }
 
+.track__add-btn {
+  display: none;
+}
+
+.track__dropdown.dropdown--active.dropdown--add .track__add-btn {
+  display: block;
+}
+
+.track__delete-btn {
+  display: none;
+}
+
+.track__dropdown.dropdown--active.dropdown--delete .track__delete-btn {
+  display: block;
+}
+
 .playlist__list {
   display: flex;
   flex-wrap: wrap;
@@ -1279,6 +1295,39 @@ body {
   cursor: pointer;
 }
 
+.playlists-modal__playlist_add {
+  width: 288px;
+  height: 30px;
+  margin-top: 20px;
+}
+
+.playlists-modal__playlist_add_btn {
+  outline: none;
+}
+
+.playlists-modal__playlist_add_btn svg {
+  display: block;
+  line-height: 0;
+  width: 30px;
+  height: 30px;
+}
+
+.playlists-modal__playlist_add_btn svg g g {
+  transition: fill .3s ease-in-out;
+}
+
+.playlists-modal__playlist_add_btn:focus svg g g {
+  fill: black;  
+}
+
+.playlists-modal__playlist_add_btn:hover svg g g {
+  fill: black; 
+}
+
+.playlists-modal__playlist_add_btn:active svg g g {
+  fill: black;
+}
+
 .playlists-modal__playlist_content {
   margin-top: 20px;
   margin-bottom: 20px;
@@ -1325,6 +1374,7 @@ body {
 
 .playlists-modal__close-btn {
   position: absolute;
+  z-index: 1000;
   bottom: 20px;
   right: 20px;
   background: #AAAAAA;

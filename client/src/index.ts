@@ -1,12 +1,12 @@
 import './assets/style/style.scss';
 import urlUserAvatar from "./assets/image/common/user.jpg";
 // import { insertHTML } from './utils/utils';
-import { ElementHeader } from './components/content/header/header';
-import { ElementAsaid } from './components/content/body/asaid/asaid';
-import { ListElementPlaylist } from './components/content/body/main/playlists/playlists';
-import { ListElementSong } from './components/content/body/main/songs/songs';
-import { ElementPlayer } from './components/content/player/player';
-import { ElementModalAddPlaylist } from './components/modal/modal';
+import { HeaderEl } from './components/content/header/header';
+import { AsaidEl } from './components/content/body/asaid/asaid';
+import { PlaylistsEl } from './components/content/body/main/playlists/playlists';
+import { SongsEl } from './components/content/body/main/songs/songs';
+import { PlayerEl } from './components/content/player/player';
+import { PlaylistModalEl, PlaylistModalBtnEl } from './components/modal/modal';
 import { SONGS, PLAYLISTS, USERS } from './mock/data';
 import { append, setSessionStorage, getSessionStorage, shuffleArray, setURLParams, getURLParamByKey } from './utils/utils';
 import { CustomEvent } from './components/base/base';
@@ -27,23 +27,24 @@ import { Playlists, fetchGetUserPlaylists, fetchPlaylistsById } from './api/play
  */
 class App {
 
-    body: ElementOrNone = null;  // DOM элемент - body - тело приложения
-    modalAddPlaylist: ElementOrNone = null; // DOM элемент - модальное окно добавления трека в плейлист
-    content: ElementOrNone = null; // DOM элемент - основной контейнер
-    headerEl: ElementOrNone = null; // DOM элемент - шапка приложения
-    wrapper: ElementOrNone = null;  // DOM элемент - обертка центальной части контента
-    asaid: ElementOrNone = null;  // DOM элемент - меню
-    main: ElementOrNone = null;  // DOM элемент - контейнер страниц
-    listSongs: ElementOrNone = null;   // DOM элемент - страница треков
-    listPlaylists: ElementOrNone = null;   // DOM элемент - страница плейлистов
-    playerEl: ElementOrNone = null; // DOM элемент - плеер
+    // DOM элементы
+    bodyEl: ElementOrNone = null;  // тело приложения
+    contentEl: ElementOrNone = null; // основной контейнер
+    wrapperEl: ElementOrNone = null;  // обертка центальной части контента
+    mainEl: ElementOrNone = null;  // контейнер страниц
 
-    player?: ElementPlayer; //  класс для создания плеера
-    header?: ElementHeader; //  класс для создания шапки приложения
+    // классы создания DOM элементов
+    playlistModal?: PlaylistModalEl; //  модальное окно добавления трека в плейлист
+    player?: PlayerEl; //  плеер
+    header?: HeaderEl; //  шапка приложения
+    songs?: SongsEl; //  список треков
+    playlists?: PlaylistsEl; // список плейлистов
+    asaid?: AsaidEl; // меню
 
-    songs: Songs = []; // список воспоизведения плеера
-    songsCopy: Songs = []; // копия списока воспоизведения плеера
+    playSongs: Songs = []; // список воспоизведения плеера
+    playSongsCopy: Songs = []; // копия списока воспоизведения плеера
 
+    audioCtx?: AudioContext; // аудиоконтекст
     play: boolean = false; // флаг Проигрывать треки
     repeat: boolean = false; // флаг Трек на повтор
     shuffle: boolean = false; // флаг Перемешать треки в случайном порядке
@@ -91,20 +92,32 @@ class App {
     async render() {
 
         // получаем элемент - тело приложения
-        this.body = document.querySelector('body');
+        this.bodyEl = document.querySelector('body');
+
+        // c API получаем список плейлистов
+        let playlists: Playlists = [];
+        try {
+            playlists = await fetchGetUserPlaylists(getSessionStorage('token'));
+        } catch (e) { console.log(e); }
 
         // создаем и довавляем в тело приложения модальное окно добавления трека в плейлист
-        this.modalAddPlaylist = new ElementModalAddPlaylist(PLAYLISTS).element;
-        append(this.body, this.modalAddPlaylist);
+        this.playlistModal = new PlaylistModalEl({
+            playlists: playlists,
+            handlers: {
+                addToPlaylistSomg: this.addToPlaylistSong.bind(this),
+                addPlaylist: this.addPlaylist.bind(this)
+            }
+        });
+        append(this.bodyEl, this.playlistModal.element);
 
         // создаем и довавляем в тело приложения основной контейнер
-        this.content = document.createElement("div");
-        this.content.classList.add("over-wrapper");
-        this.content.setAttribute('style', 'position: relative; overflow: hidden;');
-        append(this.body, this.content);
+        this.contentEl = document.createElement("div");
+        this.contentEl.classList.add("over-wrapper");
+        this.contentEl.setAttribute('style', 'position: relative; overflow: hidden;');
+        append(this.bodyEl, this.contentEl);
 
         // создаем и довавляем в основной контейнер шапку приложения
-        this.header = new ElementHeader(
+        this.header = new HeaderEl(
             {
                 user: USERS[0],
                 url_avatar: urlUserAvatar,
@@ -113,35 +126,28 @@ class App {
                 }
             }
         );
-        this.headerEl = this.header.element;
-        append(this.content, this.headerEl);
+        append(this.contentEl, this.header.element);
 
         // создаем и довавляем в основной контейнер обертку центальной части контента
-        this.wrapper = document.createElement("div");
-        this.wrapper.classList.add("content-wrap", "flex")
-        this.content.append(this.wrapper);
-
-        // c API получаем список плейлистов
-        let playlists: Playlists = [];
-        try {
-            playlists = await fetchGetUserPlaylists(getSessionStorage('token'));
-        } catch (e) { console.log(e); }
+        this.wrapperEl = document.createElement("div");
+        this.wrapperEl.classList.add("contentEl-wrap", "flex")
+        this.contentEl.append(this.wrapperEl);
 
         // создаем и довавляем в обертку центальной части контента меню
-        this.asaid = new ElementAsaid(
+        this.asaid = new AsaidEl(
             {
                 playlists: playlists,
                 handlers: {
                     navigate: this.navigate.bind(this),
                 }
             }
-        ).element;
-        append(this.wrapper, this.asaid);
+        );
+        append(this.wrapperEl, this.asaid?.element);
 
         // создаем и довавляем в обертку центальной части контента контейнера страниц
-        this.main = document.createElement("main");
-        this.main.classList.add("main");
-        this.wrapper.append(this.main);
+        this.mainEl = document.createElement("main");
+        this.mainEl.classList.add("main");
+        this.wrapperEl.append(this.mainEl);
 
         // отображаем текущую страницу
         await this.router({ name: window.location.pathname, search: '' });
@@ -151,11 +157,11 @@ class App {
         window.addEventListener('popstate', () => this.router({ name: window.location.pathname, search: '' }));
 
         // делаем так чтобы модальное окно Удаления/добавления трека
-        // автоматически закрывалость при нажатии на любую область плиложения кроме этого окна
-        document.body.addEventListener('click', (e: CustomEvent) => {
+        // автоматически закрывалость при нажатии на любую область приложения кроме этого окна
+        this.bodyEl?.addEventListener('click', (e: CustomEvent) => {
             if (e.__isClickBtnOpenDropdown) return;
-            document.querySelectorAll('.track__dropdown').forEach((e) => {
-                e?.classList.remove('dropdown--active');
+            this.songs?.songObjs.forEach(item => {
+                item.dropdownEl?.classList.remove('dropdown--active');
             })
         })
 
@@ -172,34 +178,50 @@ class App {
     }
 
     /***
-    * Обработчик клика кнопки открытия модального окна 
-    * с двумя возможными контестными действиями (удаления/добавления)
+    * Обработчик события нажатия на кнопку открытия 
+    * всплывающего окна добавления/удаления трека
     * @param {number} id - идентификатор элемента
     * @param {ElementOrNone} e - объект события элемента
     */
-    dropdown(id: number, e?: CustomEvent): void {
+    dropdown(id: number, e: CustomEvent): void {
 
-        if (!(id && e)) return;
+        // по id получаем объект трека класса списка треков
+        const songObj = this.songs?.getSongElById(id);
+
+        // не обрабатывем событие 
+        // если объект трека с таким id не найден
+        if (!songObj) return;
 
         // закрываеи все модальные окна Удаления/добавления трека 
         // если они были открыты
-        document.querySelectorAll('.track__dropdown').forEach((e) => {
-            e?.classList.remove('dropdown--active');
+        this.songs?.songObjs.forEach(item => {
+            item.dropdownEl?.classList.remove('dropdown--active');
         })
         e.__isClickBtnOpenDropdown = true;
+        
         // открываем необхлдимое модальные окно Удаления/добавления трека
-        const dropdown = document.querySelector(`[data-num_track_dropdown="${id}"]`)
-        dropdown?.classList.add('dropdown--active');
+        songObj.dropdownEl?.classList.add('dropdown--active');
+
     }
 
     /***
-    * Обработчик клика кнопки добавления трека в плейлист
+    * Обработчик события нажатия на 
+    * кнопку Добавить в плейлист
     * @param {number} id - идентификатор элемента
     * @param {ElementOrNone} e - объект события элемента
     */
     add(id: number, e?: CustomEvent): void {
+        
+        // по id получаем объект трека класса списка треков
+        const songObj = this.songs?.getSongElById(id);
+
+        // не обрабатывем событие 
+        // если объект трека с таким id не найден
+        if (!songObj) return;
+
         // открываем модальное окно добавления трека в плейлист
-        this.modalAddPlaylist?.classList.add('show');
+        this.playlistModal?.element?.classList.add('show');
+
     }
 
     /***
@@ -208,9 +230,16 @@ class App {
     * @param {ElementOrNone} e - объект события элемента 
     */
     delete(id: number, e?: CustomEvent): void {
+        
+        // по id получаем объект трека класса списка треков
+        const songObj = this.songs?.getSongElById(id);
+
+        // не обрабатывем событие 
+        // если объект трека с таким id не найден
+        if (!songObj) return;
+
         // находим соответствующий элемент трека и удаляем его из DOM
-        const songItem = document.querySelector(`[data-num_tracks_item="${id}"]`);
-        songItem?.remove();
+        songObj.element?.remove();
     }
 
     /***
@@ -222,8 +251,6 @@ class App {
 
         (async () => {
 
-            let like = false; // статус трека - в избранном/ не в избранном 
-
             // по id получаем с API объект с данными трека
             let song: Song;
             try {
@@ -234,7 +261,7 @@ class App {
             }
 
             // определяем текущий статус трека - в избранном или нет ??
-            like = isLikeSong(song, USER.username)
+            let like = isLikeSong(song, USER.username)
 
             try {
                 // если не в избранном
@@ -257,17 +284,21 @@ class App {
 
             // находим соответствующую кнопку лайка и меняем ее состояние
             // если она была активной делаем ее неактивной и наоборот
-            const likeBtn = document.querySelector(`[data-num_track_like_btn="${id}"]`);
-            if (likeBtn) likeBtn?.classList.toggle('like-btn--active');
+            const songEl = this.songs?.getSongElById(id);
 
-            const likeBtnPlayer = document.querySelector(`[data-player_num_track_like_btn="${id}"]`);
-            if (likeBtnPlayer) likeBtnPlayer?.classList.toggle('like-btn--active');
+            if (songEl?.btnLikeEl && id === songEl?.id) {
+                songEl.btnLikeEl.classList.toggle('like-btn--active');
+            };
+            
+            if (this.player && this.player.btnLikeSongEl && id === this.player?.id) {
+                this.player.btnLikeSongEl.classList.toggle('like-btn--active');
+            };
 
             // если открыта страница ибранных треков
             // и трек удален из избранных, перерисовывам страницу
-            const urlPathName = window.location.pathname;
-            if (urlPathName === "/favorite") {
-                const result = await this.router({ name: urlPathName, search: '' });
+            if (window.location.pathname === "/favorite") {
+                const result = await this.router({ name: window.location.pathname, search: '' });
+
                 setURLParams("songId", '');
             }
 
@@ -347,16 +378,22 @@ class App {
             const songs: Songs = await this.getSongs(selectPageSongsLike, Number(playlistId));
 
              // фильтруем список полученных треков и сохраняем в список воспроизведения плеера
-            this.songs = songs.filter(({ name }) =>
+            this.playSongs = songs.filter(({ name }) =>
                 name.toLowerCase().includes(searchName.toLowerCase())
             );
-            this.songsCopy = [...songs];
+            this.playSongsCopy = [...songs];
          
             // отрисовывам страницу с треками
-            await this.renderPageSongs(this.songs, title);
+            await this.renderPageSongs(
+                this.playSongs, 
+                title,
+                {
+                   add: !selectPlaylist,
+                   delete: selectPlaylist 
+                }
+            );
             
-            
-            if (this.shuffle) shuffleArray(this.songs);
+            if (this.shuffle) shuffleArray(this.playSongs);
 
             if (!selectPlaylist && !selectPageSongsLike) {
                 // кнопку навигации Треки делаем активной
@@ -373,7 +410,7 @@ class App {
             if (!songId) {
 
                 // в плеер выводим случайно выбранный трек
-                const ranSong = this.getSongRandom(this.songs);
+                const ranSong = this.getSongRandom(this.playSongs);
                 if (ranSong) {
                     this.renderPlayer(ranSong, this.play);
                     setURLParams("songId", String(ranSong.id));
@@ -381,7 +418,6 @@ class App {
      
             // иначе в плеер выводим трек с ID из URL параметра
             } else {
-                console.log(songId);
                 this.renderPlayerById(Number(songId), this.play);
             }
 
@@ -391,7 +427,7 @@ class App {
         // переход на страницу Плейлисты
         if (page.name === '/playlists') {
             // удаляем из DOM плеер (футер)
-            this.playerEl?.remove();
+            this.player?.element?.remove();
 
             // c API получаем список плейлистов
             let playlists: Playlists = [];
@@ -499,18 +535,28 @@ class App {
      * Функция отрисовки страницы со списком треков
      * @param {Songs} songs - список треков (объекты с данными о треке)
      * @param {string} title - заголовок страницы
+     * @param { add?: boolean,  delete?: boolean } dropdown - объект с настройками отображения всплывающего окна 
+     * add 1/0 - отобразить/скрыть кнопку Добавить в плейлист
+     * delete 1/0 - отобразить/скрыть кнопку Удалить из плейлиста
      */
-    async renderPageSongs(songs: Songs, title: string): Promise<Songs> {
+    async renderPageSongs(
+        songs: Songs, 
+        title: string, 
+        dropdown?: {
+            add?: boolean,
+            delete?: boolean
+        }): Promise<Songs> {
 
         // вызываем функцию очистки контейнера страниц
         this.clearPageContainer()
 
         // создаем и довавляем контейнер страниц элемент страницы треков
-        this.listSongs = new ListElementSong(
+        this.songs = new SongsEl(
             {
                 songs: songs,
                 username: USER.username,
                 title: title,
+                dropdown: dropdown,
                 handlers: {
                     turn: this.turn.bind(this),
                     dropdown: this.dropdown.bind(this),
@@ -521,8 +567,8 @@ class App {
                 }
             }
 
-        ).element;
-        append(this.main, this.listSongs);
+        );
+        append(this.mainEl, this.songs.element);
 
         // возвращаем список треков
         return songs
@@ -538,10 +584,10 @@ class App {
         this.clearPageContainer()
 
         // создаем и довавляем контейнер страниц элемент страницы плейлистов
-        this.listPlaylists = new ListElementPlaylist({
+        this.playlists = new PlaylistsEl({
             playlists: playlists,
-        }).element;
-        append(this.main, this.listPlaylists);
+        });
+        append(this.mainEl, this.playlists?.element);
     }
 
     /**
@@ -549,7 +595,7 @@ class App {
      */
     clearPageContainer(): void {
         // очищаем контейнер страниц
-        if (this.main instanceof HTMLElement) this.main.innerHTML = '';
+        if (this.mainEl instanceof HTMLElement) this.mainEl.innerHTML = '';
     }
 
     /**
@@ -561,10 +607,10 @@ class App {
         if (!song) return;
  
         // удаляем старый футер
-        this.playerEl?.remove();
+        this.player?.element?.remove();
 
         // создаем новый футер с плеером
-        this.player = new ElementPlayer(
+        this.player = new PlayerEl(
             {
                 song: song,
                 username: USER.username,
@@ -584,9 +630,8 @@ class App {
                 }
             }
         );
-        this.playerEl = this.player.element;
+        append(this.contentEl, this.player.element);
 
-        append(this.content, this.playerEl);
     }
 
     /**
@@ -595,13 +640,12 @@ class App {
      */
     renderPlayerById(id: number, play: boolean = false): void {
         // получаем индекс трека в массиве треков
-        const song= this.getSongById(this.songs, id);
-
-        console.log(song);
+        const song= this.getSongById(this.playSongs, id);
 
         // отрисовываем плеер с соответствующим треком
         if (song) {
             this.renderPlayer(song, this.play);
+
             setURLParams("songId", String(id));
         }
     }
@@ -619,7 +663,7 @@ class App {
         
         // в URL и классе значение параметра play 
         // меняем на противоположное
-        this.play ? this.play = false : this.play = true;
+        this.play ? this.play = status : this.play = status;
         this.play ? setURLParams('play', '1') : setURLParams('play', '0');
     }
 
@@ -654,9 +698,9 @@ class App {
         // если не режим повтора
         if (!this.repeat) {
             if (this.shuffle) {
-                shuffleArray(this.songs);
+                shuffleArray(this.playSongs);
             } else {
-                this.songs = [...this.songsCopy];
+                this.playSongs = [...this.playSongsCopy];
             }
         }
 
@@ -675,7 +719,7 @@ class App {
         // если не режим повтора
         // включаем предыдущий трек
         if (!this.repeat) {
-            const prevSong = this.getSongNextById(this.songs, id, false);
+            const prevSong = this.getSongNextById(this.playSongs, id, false);
             if (prevSong) {
                 this.renderPlayer(prevSong, this.play);
                 setURLParams("songId", String(prevSong.id));
@@ -698,7 +742,7 @@ class App {
         // если не режим повтора
         // включаем следующий трек
         if (!this.repeat) {
-            const nextSong = this.getSongNextById(this.songs, id);
+            const nextSong = this.getSongNextById(this.playSongs, id);
             if (nextSong) {
                 this.renderPlayer(nextSong, this.play);
                 setURLParams("songId", String(nextSong.id));
@@ -824,6 +868,23 @@ class App {
         }      
     }
 
+    /**
+    * Обработчик события нажатия на кнопку 
+    * модального окна добавления трека в плейлист
+    * @param {elem} PlaylistModalBtnEl - кнопки модального окна добавления трека в плейлист
+    */
+    addToPlaylistSong(elem?: PlaylistModalBtnEl, e?: CustomEvent) {
+        console.log(elem);
+    }
+
+    /**
+     * Обработчик события нажатия на кнопку Добавить плейлист
+     * @param {PlaylistModalEl} elem - объект класса модального окна добавления трека в плейлист
+     * @param e - объект события
+     */
+    addPlaylist(elem?: PlaylistModalEl, e?: CustomEvent) {
+        console.log(elem);
+    }
 
 }
 

@@ -51,9 +51,8 @@ export class BaseElement extends BaseAbstract {
     }
     
     removeElement(): void {
-        this.element = null;
+        this.element?.remove();
     }
-
 
 }
 

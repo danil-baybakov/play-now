@@ -2,35 +2,52 @@ import { BaseElement } from "../../../base/base";
 import { Playlists, Playlist } from "../../../../api/playlist/apiPlaylist";
 import { CustomEvent } from "../../../base/base";
 import { IPage } from "../../../../types/types";
+import { HTMLElementOrNone } from "../../../../types/types";
 
-interface AsaidProps {
-  playlists: Playlists,
-  handlers?: {
-    navigate?: (page: string) => void
-  }
+interface AsaidElProps {
+	playlists: Playlists,
+	handlers?: {
+		navigate?: (page: string) => void
+	}
 }
 
-export class ElementAsaid extends BaseElement {
+/**
+ * Класс для создания меню
+ */
+export class AsaidEl extends BaseElement {
 
-    constructor(
-      private props: AsaidProps,
-    ) {
-      super();
-      this.getElement();
-      this.setEventListenner();
-    }
-  
-    getTemplate(): void {      
-        let htmlButtonPlaylistLists: string = '';
-        for (const key in this.props.playlists) {
-            const elementButtonPlaylist = new ElementButtonPlaylist(
-              {
-                playlist: this.props.playlists[key],
-              }
-            );
-            htmlButtonPlaylistLists += elementButtonPlaylist.template;
-        }
-        this.template = `
+	constructor(
+		private props: AsaidElProps,
+	) {
+		super();
+		this.init();
+	}
+
+	/**
+	* Метод инициалиации класса
+	*/
+	private init() {
+		// формируем DOM-элемент класса
+		this.getElement();
+
+		// вешаем обработчики событий на все элементы
+		this.setEventListenner();
+	}
+
+    /**
+     * Метод создает шаблон HTML разметки DOM элемента класса
+    */
+	getTemplate(): void {
+		let htmlButtonPlaylistLists: string = '';
+		for (const key in this.props.playlists) {
+			const elementButtonPlaylist = new AsaidPlaylistBtnEl(
+				{
+					playlist: this.props.playlists[key],
+				}
+			);
+			htmlButtonPlaylistLists += elementButtonPlaylist.template;
+		}
+		this.template = `
             <aside class="aside">
                 <h2 class="aside__h2 visually-hidden">Левая панель навигации</h2>
                 <nav class="aside__nav">
@@ -76,47 +93,76 @@ export class ElementAsaid extends BaseElement {
                 </ul>
             </nav>
         </aside>
-      `; 
-    }
+      `;
+	}
 
-    setEventListenner() {
-      const navBtns = this.element?.querySelectorAll('.aside__btn');
+	setEventListenner() {
+		const navBtns = this.element?.querySelectorAll('.aside__btn');
 
-      navBtns?.forEach(elem => {
-        elem.addEventListener('click', (e) => {
+		navBtns?.forEach(elem => {
+			elem.addEventListener('click', (e) => {
 
-          e.preventDefault();
+				e.preventDefault();
 
-          if (elem instanceof HTMLElement) {
-            const path  =  elem.dataset["path"] ? elem.dataset["path"] : '';
-            if (this.props.handlers?.navigate) this.props.handlers?.navigate(path);
-          }
-        })
-      })
+				if (elem instanceof HTMLElement) {
+					const path = elem.dataset["path"] ? elem.dataset["path"] : '';
+					if (this.props.handlers?.navigate) this.props.handlers?.navigate(path);
+				}
+			})
+		})
 
-    }
-  
-  }
+	}
 
-interface ButtonPlaylistProps {
-  playlist: Playlist,
 }
 
-export class ElementButtonPlaylist extends BaseElement {
+interface AsaidPlaylistBtnElProps {
+	playlist: Playlist,
+}
 
-    constructor(
-      private props: ButtonPlaylistProps,
-    ) {
-      super();
-      this.getElement();
-    }
-  
-    getTemplate(): void {
-      this.template = `                   
+/**
+ * Класс для создания в меню кнопок перехода на страницу плейлиста
+ */
+export class AsaidPlaylistBtnEl extends BaseElement {
+
+    id?: number;  // идентификатор плейлиста
+
+	// DOM элементы
+	btnPlaylistEl: HTMLElementOrNone = null; // кнопка перехода на страницу плейлиста
+
+	constructor(
+		private props: AsaidPlaylistBtnElProps,
+	) {
+		super();
+		this.init();
+	}
+
+	/**
+	* Метод инициалиации класса
+	*/
+	private init() {
+
+        // добавляем в класс идентификатор плейлиста как свойство
+        this.id = this.props.playlist.id;
+		
+		// формируем DOM-элемент класса
+		this.getElement();
+
+		// в свойства класса добавляем элементы
+        // кнопка перехода на страницу плейлиста
+        this.btnPlaylistEl = this.element?.querySelector('.asaid__btn-playlist');
+
+
+	}
+
+    /**
+     * Метод создает шаблон HTML разметки DOM элемента класса
+    */
+	getTemplate(): void {
+		this.template = `                   
         <li class="aside__item">
-            <button class="aside__btn" data-path=playlist-${this.props.playlist.id}>${this.props.playlist.name}</button>
+            <button class="aside__btn asaid__btn-playlist" data-path=playlist-${this.props.playlist.id}>${this.props.playlist.name}</button>
         </li>
-      `; 
-    }
-  
-  }
+      `;
+	}
+
+}
