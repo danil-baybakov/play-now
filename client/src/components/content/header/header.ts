@@ -1,9 +1,9 @@
 import { BaseElement } from "../../base/base";
-import { User } from "../../../api/user/apiUser";
+import { LoginDto } from "../../../api/user/apiUser";
 import { debounce } from "../../../utils/utils";
 
 interface HeaderElProps {
-    user: User,
+    user: LoginDto,
     url_avatar?: string,
     handlers?: {
         search?: (key: string, value: string, e: CustomEvent) => void,

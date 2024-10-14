@@ -1,13 +1,14 @@
 import { BaseElement } from "../base/base";
-import { Playlist, Playlists } from "../../api/playlist/apiPlaylist";
+import { Playlist, Playlists, checkSongToPlaylistById } from "../../api/playlist/apiPlaylist";
 
-import urlDefaultImg from "../../assets/image/playlists/playlists.jpg";
 import { HTMLElementOrNone } from "../../types/types";
 import { CustomEvent } from "../base/base";
 import { append } from "../../utils/utils";
 
 interface PlaylistModalElProps {
     playlists: Playlists,
+    songId?: number,
+    urlDefaulImg?: string,
     handlers?: {
         addToPlaylistSomg?: (elem?: PlaylistModalBtnEl, e?: CustomEvent) => void,
         addPlaylist?: (elem?: PlaylistModalEl, e?: CustomEvent) => void,
@@ -21,6 +22,8 @@ interface PlaylistModalElProps {
 export class PlaylistModalEl extends BaseElement {
 
     playlistModalBtnObjs: PlaylistModalBtnEl[] = []; // список объктов класса кнопок модального окна добавления трека в плейлист
+
+    songId?: number; // id добавляемого трека
 
     // DOM элементы
     playlistsBtnEl: HTMLElementOrNone = null; // контейнер кнопок модального окна добавления трека в плейлист
@@ -39,6 +42,9 @@ export class PlaylistModalEl extends BaseElement {
     */
     private init() {
 
+        // id добавляемого трека делаем как свойсво класса
+        this.songId = this.props.songId;
+
         // формируем DOM-элемент класса
         this.getElement();
 
@@ -48,10 +54,10 @@ export class PlaylistModalEl extends BaseElement {
         // кнопка Добавить плейлист
         this.btnAddPlaylist = this.element?.querySelector('.playlists-modal__playlist_add_btn');
         // кнопка Отменить
-        this.btnCancelEl = this.element?.querySelector('.playlists-modal__close-btn'); 
+        this.btnCancelEl = this.element?.querySelector('.playlists-modal__close-btn');
 
         // cоздаем и добавляем в модальное список кнопок добавления трека в плейлист
-        this.createListModalBtn();
+        this.create();
 
         // вешаем обработчики событий на все элементы
         this.setEventListenner();
@@ -100,17 +106,19 @@ export class PlaylistModalEl extends BaseElement {
      * Метод создает и добавляет в модальное 
      * окно список кнопок добавления трека в плейлист
      */
-    private createListModalBtn() {
+    private create() {
         if (this.props.playlists.length > 0) {
             this.props.playlists.forEach(playlist => {
                 const elementPlaylistModalBtn = new PlaylistModalBtnEl({
                     playlist: playlist,
-                    urlImg: urlDefaultImg,
+                    songId: this.props.songId,
+                    urlDefaulImg: this.props.urlDefaulImg,
+                    disable: checkSongToPlaylistById(playlist, this.props.songId),
                     handlers: {
                         click: this.props.handlers?.addToPlaylistSomg,
                     }
                 })
-                this.addPlaylistModalBtn(elementPlaylistModalBtn);
+                this.add(elementPlaylistModalBtn);
             })
         }
     }
@@ -119,7 +127,7 @@ export class PlaylistModalEl extends BaseElement {
      * Метод добавляет в модальное окно кнопку добавления трека в плейлист
     /* @param {PlaylistModalBtnEl} playlistModalBtnEl - кнопк модального окна добавления трека в плейлист
     **/
-    private addPlaylistModalBtn(playlistModalBtnEl: PlaylistModalBtnEl): void {
+    add(playlistModalBtnEl: PlaylistModalBtnEl): void {
         if (this.playlistsBtnEl && playlistModalBtnEl) {
             this.playlistModalBtnObjs.push(playlistModalBtnEl);
             append(this.playlistsBtnEl, playlistModalBtnEl.element);
@@ -135,7 +143,8 @@ export class PlaylistModalEl extends BaseElement {
         this.btnCancelEl?.addEventListener('click', (e: CustomEvent) => {
             e.preventDefault();
             if (this.props.handlers?.cancel) this.props.handlers.cancel(this, e);
-            this.element?.classList.remove('show');
+            this.hide();
+            this.removeElement();
         })
 
         // обработка события нажатия на кнопку Добавить плейлист
@@ -146,12 +155,29 @@ export class PlaylistModalEl extends BaseElement {
 
     }
 
+    /**
+     * Метод открытия модального окна
+     * 
+     */
+    show() {
+        this.element?.classList.add('show');
+    }
+
+    /**
+    * Метод закрытия модального окна
+    */
+    hide() {
+        this.element?.classList.remove('show');
+    }
+
 
 }
 
 interface PlaylistModalBtnElProps {
     playlist: Playlist,
-    urlImg?: string,
+    songId?: number,
+    urlDefaulImg?: string,
+    disable?: boolean,
     handlers?: {
         click?: (elem: PlaylistModalBtnEl, e?: CustomEvent) => void,
     }
@@ -163,6 +189,10 @@ interface PlaylistModalBtnElProps {
 export class PlaylistModalBtnEl extends BaseElement {
 
     id?: number;  // идентификатор плейлиста
+
+    songId?: number; // id добавляемого трека
+
+    songsCount: number = 0; // кол-во треков в плейлисте
 
     // DOM элементы
     imgEl: HTMLElementOrNone = null; // иконка плейлиста
@@ -181,8 +211,14 @@ export class PlaylistModalBtnEl extends BaseElement {
      */
     private init() {
 
-        // добавляем в класс идентификатор плейлиста как свойство
+        // добавляем в класс идентификатор плейлиста как свойство   
         this.id = this.props.playlist.id;
+
+        // id добавляемого трека делаем как свойсво класса
+        this.songId = this.props.songId;
+
+        // определяем кол-во треков в плейлисте и добавляем как свойство класса
+        this.props.playlist.songs && this.props.playlist.songs.length > 0 ? this.songsCount = this.props.playlist.songs.length : this.songsCount = 0;
 
         // формируем DOM-элемент класса
         this.getElement();
@@ -195,6 +231,9 @@ export class PlaylistModalBtnEl extends BaseElement {
         // информация плейлиста
         this.infoEl = this.element?.querySelector('.playlists-modal__playlist__info');
 
+        // выводим информацию о количестве треков в плейлисте
+        this.renderSongsCount(this.songsCount);
+
         // вешаем обработчики событий на все элементы
         this.setEventListenner();
 
@@ -205,10 +244,11 @@ export class PlaylistModalBtnEl extends BaseElement {
      */
     getTemplate(): void {
         this.template = `
-            <div class="playlists-modal__playlist">
-                <img src=${this.props.urlImg} alt=${this.props.playlist.name} class="playlists-modal__playlist__image" />
+            <div class="playlists-modal__playlist ${this.props.disable ? 'disable' : ''}">
+                <img src=${this.props.urlDefaulImg} alt=${this.props.playlist.name} class="playlists-modal__playlist__image" />
                 <div class="playlists-modal__playlist__title">${this.props.playlist.name}</div>
-                <div class="playlists-modal__playlist__info">${this.props.playlist.songs.length > 0 ? this.props.playlist.songs.length : "Нет"} треков</div>
+                <div class="playlists-modal__playlist__info">
+                </div>
             </div>
       `;
     }
@@ -223,6 +263,147 @@ export class PlaylistModalBtnEl extends BaseElement {
             e.preventDefault();
             if (this.props.handlers?.click && this.id) this.props.handlers.click(this, e);
         })
+    }
+
+    /**
+     * Метод делает кнопку модального окна добавления трека в плейлист не активной
+     */
+    disable() {
+        this.element?.classList.add('disable')
+    }
+
+    /**
+     * Метод делает кнопку модального окна добавления трека в плейлист активной
+     */
+    active() {
+        this.element?.classList.remove('disable')
+    }
+
+    /**
+     * Метод отображения информации о количестве треков в плейлисте
+     * @param {number} count - кол-во треков в плейлисте
+     */
+    renderSongsCount(count: number) {
+        if (this.infoEl) this.infoEl.textContent = `
+            ${count > 0 ? count : "Нет"} треков
+        `;
+    }
+
+    /**
+     * Метод увеливает значение на 1 в элементе с 
+     * информацией о количестве треков в плейлисте
+     */
+    incSongsCount() {
+        this.songsCount += 1;
+        this.renderSongsCount(this.songsCount);
+    }
+
+}
+
+interface PlaylistModalRemoveElProps {
+    songId: number,
+    playlistId: number,
+    handlers?: {
+        removeFromPlaylistSong?: (elem?: PlaylistModalRemoveEl, e?: CustomEvent) => void,
+        cancel?: (elem?: PlaylistModalRemoveEl, e?: CustomEvent) => void,
+    }
+}
+
+/**
+ * Класс для создания модального окна удаления трека из плейлиста
+ */
+export class PlaylistModalRemoveEl extends BaseElement {
+
+    songId?: number // id трека
+    playlistId?: number // id плейлиста
+
+    // DOM элементы
+    btnOk: HTMLElementOrNone = null; // кнопка Да
+    btnCancelEl: HTMLElementOrNone = null; // кнопка Отменить
+
+    constructor(
+        private props: PlaylistModalRemoveElProps,
+    ) {
+        super();
+        this.init();
+    }
+
+
+    /**
+     * Метод инициалиации класса
+     */
+    init() {
+
+        // id плейлиста и трека делаем как свойство класса
+        this.songId = this.props.songId;
+        this.playlistId = this.props.playlistId;
+
+        // формируем DOM-элемент класса
+        this.getElement();
+
+        // в свойства класса добавляем элементы
+        // кнопка Отменить
+        this.btnCancelEl = this.element?.querySelector('.playlists-modal-remove__close-btn');
+        // кнопка Да
+        this.btnOk = this.element?.querySelector('.playlists-modal-remove__ok-btn');
+
+        // вешаем обработчики событий на все элементы
+        this.setEventListenner();
+    }
+
+    /**
+     * Метод создает шаблон HTML разметки DOM элемента класса
+     */
+    getTemplate(): void {
+        this.template = `
+            <div class="playlists-modal playlists-modal-remove">
+                <div class="playlists-modal__title playlists-modal-remove__title">
+                    Удалить из плейлиста
+                </div>
+                <div class="playlists-modal__footer playlists-modal-remove__footer">
+                    <button class="playlists-modal-remove__btn playlists-modal-remove__ok-btn">
+                        Да
+                    </button>
+                    <button class="playlists-modal-remove__btn playlists-modal-remove__close-btn">
+                        Отменить
+                    </button>
+                </div>
+            </div>
+    `;
+    }
+
+    /**
+     * Метод вешает обработчики событий на все элементы
+     */
+    setEventListenner() {
+        // обработка события нажатия на кнопку Отмена
+        this.btnCancelEl?.addEventListener('click', (e: CustomEvent) => {
+            e.preventDefault();
+            if (this.props.handlers?.cancel) this.props.handlers.cancel(this, e);
+            this.hide();
+            this.removeElement();
+        })
+
+        // обработка события нажатия на кнопку Да
+        this.btnOk?.addEventListener('click', (e: CustomEvent) => {
+            e.preventDefault();
+            if (this.props.handlers?.removeFromPlaylistSong) this.props.handlers.removeFromPlaylistSong(this, e);
+        })
+    }
+
+    /**
+     * Метод открытия модального окна
+     * 
+     */
+    show() {
+        this.element?.classList.add('show');
+    }
+
+    /**
+    * Метод закрытия модального окна
+    */
+    hide() {
+        this.element?.classList.remove('show');
     }
 
 }

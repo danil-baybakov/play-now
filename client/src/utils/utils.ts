@@ -87,15 +87,24 @@ export function createElement(html: string): Element | null {
     return template.content.firstElementChild
 }
 
+type Insert = "append" | "prepend" | "before" | "after"
 
 /**
- * Функция добавляем в родительский DOM-элемент дочерний DOM элемент
+ * Функция вставки DOM-элемента
  * @param {Element | null} root - родительский DOM-элемент
  * @param {ElementOrNone} node - дочерний DOM элемент
  */
-export function append(root: Element | null, node: ElementOrNone) {
+export function append(root: Element | null, node: ElementOrNone, mode?: Insert) {
     if ((node !== null) && (root !== null)) {
-        root.append(node);
+        if (!mode || mode === "append"){
+            root.append(node);
+        } else if (mode === "prepend") {
+            root.prepend(node);
+        } else if (mode === "before") { 
+            root.before(node);
+        } else {
+            root.after(node);
+        }
     }
 }
 

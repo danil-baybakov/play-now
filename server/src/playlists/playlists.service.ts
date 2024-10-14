@@ -97,7 +97,7 @@ export class PlaylistsService {
       throw new HttpException('Access forbidden', HttpStatus.FORBIDDEN);
     }
 
-    if (!playlist.songs.find((p) => p.id === user.id)) {
+    if (!playlist.songs.find((p) => p.id == songId)) {
       throw new HttpException('Song is not added', HttpStatus.BAD_REQUEST);
     }
 

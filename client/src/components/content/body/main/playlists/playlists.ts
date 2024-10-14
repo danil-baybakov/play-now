@@ -63,7 +63,7 @@ export class PlaylistEl extends BaseElement {
             </picture>
             <div class="playlist__content">
                 <h3 class="playlist__h3"><a class="playlist__h3__link" href="/playlist-${this.props.playlist.id}">${this.props.playlist.name}</a></h3><span
-                    class="playlist__count">${this.props.playlist.songs.length > 0 ? this.props.playlist.songs.length : "Нет"} треков</span>
+                    class="playlist__count">${this.props.playlist.songs && this.props.playlist.songs.length > 0 ? this.props.playlist.songs.length : "Нет"} треков</span>
             </div>
         </li>
     `; 
