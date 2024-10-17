@@ -46,7 +46,8 @@ export class PlaylistsService {
   }
 
   async findOne(id: number): Promise<Playlist> {
-    const playlist = await this.playlistRepository.findOne(id, {
+    const playlist = await this.playlistRepository.findOne({
+      where: { id },
       loadEagerRelations: true,
     });
 
@@ -96,7 +97,7 @@ export class PlaylistsService {
       throw new HttpException('Access forbidden', HttpStatus.FORBIDDEN);
     }
 
-    if (!playlist.songs.find((p) => p.id === user.id)) {
+    if (!playlist.songs.find((p) => p.id == songId)) {
       throw new HttpException('Song is not added', HttpStatus.BAD_REQUEST);
     }
 

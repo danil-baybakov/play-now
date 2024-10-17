@@ -15,7 +15,8 @@ export class ArtistsService {
   ) {}
 
   async findOne(id: number): Promise<Artist> {
-    const artist = await this.artistRepository.findOne(id, {
+    const artist = await this.artistRepository.findOne({
+      where: { id },
       loadEagerRelations: true,
     });
 

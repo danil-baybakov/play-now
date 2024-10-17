@@ -18,15 +18,21 @@ export class UsersService {
   }
 
   findOne(id: number): Promise<User | null> {
-    return this.usersRepository.findOne(id);
+    return this.usersRepository.findOne({
+      where: { id },
+    });
   }
 
   findByUsername(username: string): Promise<User | null> {
-    return this.usersRepository.findOne({ username });
+    return this.usersRepository.findOne({
+      where: { username },
+    });
   }
 
   async getPlaylists(username: string): Promise<Playlist[]> {
-    const user = await this.usersRepository.findOne({ username });
+    const user = await this.usersRepository.findOne({
+      where: { username },
+    });
 
     if (!user) {
       throw new HttpException('User does not exists', HttpStatus.NOT_FOUND);
@@ -35,8 +41,10 @@ export class UsersService {
     return user.playlists;
   }
 
-  async getUserLikes(username): Promise<UserLikesDto> {
-    const user = await this.usersRepository.findOne({ username });
+  async getUserLikes(username: string): Promise<UserLikesDto> {
+    const user = await this.usersRepository.findOne({
+      where: { username },
+    });
 
     if (!user) {
       throw new HttpException('User does not exists', HttpStatus.NOT_FOUND);

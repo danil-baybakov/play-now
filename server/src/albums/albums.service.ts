@@ -13,7 +13,8 @@ export class AlbumsService {
   ) {}
 
   async findOne(id: number): Promise<Album> {
-    const album = await this.albumRepository.findOne(id, {
+    const album = await this.albumRepository.findOne({
+      where: { id },
       loadEagerRelations: true,
     });
 

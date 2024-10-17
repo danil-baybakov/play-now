@@ -1,18 +1,41 @@
-import urlIngUser from "../../../assets/image/common/user.jpg";
 import { BaseElement } from "../../base/base";
-import { User } from "../../../api/user/apiUser";
+import { LoginDto } from "../../../api/user/apiUser";
+import { debounce } from "../../../utils/utils";
 
+interface HeaderElProps {
+    user: LoginDto,
+    url_avatar?: string,
+    handlers?: {
+        search?: (key: string, value: string, e: CustomEvent) => void,
+    }
+}
 
-export class ElementHeader extends BaseElement {
+export class HeaderEl extends BaseElement {
+
+    searchFieldEl?: HTMLInputElement | null;
+
 
     constructor(
-      private user: User,
+      private props: HeaderElProps,
     ) {
       super();
+      this.init();
+    }
+
+    init() {
+         // формируем DOM-элемент класса
+        this.getElement();
+
+        // в свойства класса добавляем элементы
+        // поле поиска трека
+        this.searchFieldEl = this.element?.querySelector('.header__search__field');
+
+         // вешаем обработчики событий на все элементы
+        this.setEventListenner();
     }
   
-    getTemplate(): string {
-      return `
+    getTemplate(): void {
+      this.template = `
             <header class="header flex">
                 <a class="header__logo" href="/">
                     <svg width="143" height="29" viewBox="0 0 143 29"
@@ -28,8 +51,8 @@ export class ElementHeader extends BaseElement {
                 <div class="header__search">
                     <input class="header__search__field" type="search" placeholder="ЧТО БУДЕМ ИСКАТЬ?">
                 </div>
-                <button class="header__user"><img class="header__user__img" src="${urlIngUser}"
-                    alt="Изображение пользователя"><span class="header__user__text">${this.user.username}</span><svg
+                <button class="header__user" disabled><img class="header__user__img" src="${this.props.url_avatar || ''}"
+                    alt="Изображение пользователя"><span class="header__user__text">${this.props.user.username}</span><svg
                     class="header__user__svg" width="6" height="11" viewBox="0 0 6 11" fill="none"
                     xmlns="http://www.w3.org/2000/svg">
                     <path fill-rule="evenodd" clip-rule="evenodd"
@@ -40,5 +63,33 @@ export class ElementHeader extends BaseElement {
             </header>  
       `; 
     }
+
+    /**
+     * Функция устанавливает обработчики событий на активные элементы
+     */
+    setEventListenner() {
+
+        // устанавливаем обработчик события ввода текста в
+        // поле поиска
+         this.searchFieldEl?.addEventListener('input', debounce(this.search, 500));
+      }
+
+
+    /**
+     * Функция поиска трека
+     * @param e 
+     */
+    search = (e: Event) => {
+        const target = e.target as HTMLInputElement;
+        const searchParams = {
+            key: "search",
+            value: target.value
+        }
+        if (this.props.handlers?.search) this.props.handlers?.search(searchParams.key, searchParams.value, e as CustomEvent)
+    }
+
+
+
+
   
   }

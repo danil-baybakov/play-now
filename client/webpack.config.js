@@ -20,8 +20,8 @@ const config = {
     },
     devtool: 'source-map',  
     devServer: {
-        open: true,
-        host: 'localhost',
+        historyApiFallback: true,
+        hot: true
     },
     plugins: [
         new HtmlWebpackPlugin({

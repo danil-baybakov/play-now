@@ -3,11 +3,15 @@ import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as path from 'path';
 import * as express from 'express';
+import * as cors from 'cors';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    cors: true,
+  });
 
   app.setGlobalPrefix('api');
+  app.use(cors());
   app.use('/songs', express.static(path.join(process.cwd(), 'static/songs')));
 
   const options = new DocumentBuilder()

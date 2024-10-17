@@ -32,7 +32,8 @@ export class SongsService {
   }
 
   async findOne(id: number): Promise<Song> {
-    const song = await this.songRepository.findOne(id, {
+    const song = await this.songRepository.findOne({
+      where: { id },
       loadEagerRelations: true,
     });
 
