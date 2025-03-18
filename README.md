@@ -9,7 +9,7 @@ Cтриминговый сервис для меломанов
 -   клонирование репозитория:
 
 ```bash
-git clone https://gitlab.skillbox.ru/daniil_baibakov/streaming_service.git
+git clone https://github.com/danil-baybakov/play-now.git
 ```
 
 -   запуск сервера:
